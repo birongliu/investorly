@@ -3,7 +3,6 @@ __pycache__/
 *.pyc
 instance/
 .env
-.env.*
 .pytest_cache/
 .coverage
 .vscode/
