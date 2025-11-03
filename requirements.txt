@@ -1,7 +1,9 @@
 Flask>=2.2
 gunicorn>=20.1
+python-dotenv>=1.0.0
 pandas==2.3.3
 supabase==2.23.0
 streamlit==1.51.0
 streamlit_supabase_auth
 streamlit-local-storage
+yfinance>=0.2.40
