@@ -5,11 +5,11 @@ This script fetches ETF, stock, and index data for building personalized
 investment portfolios based on user risk profiles.
 
 Usage:
-    python fetch_financial_data.py                  # Full Investorly portfolio (23 ETFs + 3 indexes)
+    python fetch_financial_data.py                  # Full Investorly portfolio (23 ETFs + 2 crypto + 3 indexes)
     python fetch_financial_data.py --quick          # Quick mode (5 essential ETFs)
     python fetch_financial_data.py --single VOO     # Fetch single ticker
     python fetch_financial_data.py --indices        # Fetch market indices only
-    python fetch_financial_data.py --crypto         # Fetch cryptocurrency data
+    python fetch_financial_data.py --crypto         # Fetch cryptocurrency data only
 """
 
 import yfinance as yf
@@ -273,6 +273,10 @@ def fetch_investorly_portfolio(period: str = "10y"):
             ('VUG', 'Vanguard Growth ETF', 'Large-cap growth'),
             ('QQQ', 'Invesco QQQ Trust', 'NASDAQ-100'),
         ],
+        "₿ Cryptocurrency (Alternative/High risk)": [
+            ('BTC-USD', 'Bitcoin', 'Digital currency'),
+            ('ETH-USD', 'Ethereum', 'Smart contract platform'),
+        ],
         "📈 Market Indexes (Benchmarking)": [
             ('^GSPC', 'S&P 500 Index', 'Key benchmark'),
             ('^DJI', 'Dow Jones Industrial Average', 'Blue chip index'),
@@ -317,6 +321,11 @@ def fetch_investorly_portfolio(period: str = "10y"):
             # For indexes, use custom filename
             if ticker.startswith('^'):
                 filename = f"index_{ticker.replace('^', '').lower()}.csv"
+                success = fetch_and_save_ticker(ticker, period=period, filename=filename)
+            # For crypto, use custom filename format
+            elif '-USD' in ticker:
+                crypto_symbol = ticker.replace('-USD', '').lower()
+                filename = f"crypto_{crypto_symbol}.csv"
                 success = fetch_and_save_ticker(ticker, period=period, filename=filename)
             else:
                 success = fetch_and_save_ticker(ticker, period=period)
@@ -443,16 +452,17 @@ def show_help():
     print("="*80 + "\n")
     print("Fetch historical ETF, stock, and index data for portfolio building.\n")
     print("Usage:")
-    print("  python fetch_financial_data.py              # Full portfolio (23 ETFs + 3 indexes)")
+    print("  python fetch_financial_data.py              # Full portfolio (23 ETFs + 2 crypto + 3 indexes)")
     print("  python fetch_financial_data.py --quick      # Quick mode (5 essential ETFs)")
     print("  python fetch_financial_data.py --single VOO # Fetch single ticker")
     print("  python fetch_financial_data.py --indices    # Market indices only")
-    print("  python fetch_financial_data.py --crypto     # Cryptocurrency data")
+    print("  python fetch_financial_data.py --crypto     # Cryptocurrency data only (BTC, ETH)")
     print("  python fetch_financial_data.py --help       # Show this help")
     print()
     print("Examples:")
     print("  python fetch_financial_data.py --single AAPL")
     print("  python fetch_financial_data.py --single SPY --period 5y")
+    print("  python fetch_financial_data.py --single BTC-USD --period 5y")
     print()
     print("="*80 + "\n")
 
