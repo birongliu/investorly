@@ -73,7 +73,6 @@ def get_asset_type(ticker):
                 return 'etf'
     return 'etf'
 
-@st.cache_data(ttl=3600)
 def load_data_safe(ticker):
     """Safely load data with caching - auto-detects asset type"""
     try:
@@ -296,21 +295,36 @@ if user:
 
                             allocations[ticker] = alloc_pct
 
-                # Calculate total allocation
-                total_allocation = sum(allocations.values())
+                # Track which slider was just changed
+                changed_ticker = None
+                max_change = 0
+                for ticker in allocations.keys():
+                    current_alloc = st.session_state.selected_assets.get(ticker, 0)
+                    change = abs(allocations[ticker] - current_alloc)
+                    if change > max_change:
+                        max_change = change
+                        changed_ticker = ticker
 
-                # Smart auto-adjustment: If total exceeds 100%, scale all proportionally
-                if total_allocation > 100:
-                    # Scale all allocations proportionally without rerunning
-                    scale_factor = 100.0 / total_allocation
-                    for ticker in allocations:
-                        scaled_value = max(0, round(allocations[ticker] * scale_factor))
-                        allocations[ticker] = scaled_value
-                    total_allocation = sum(allocations.values())
+                # Smart auto-adjustment
+                if changed_ticker and len(allocations) > 1:
+                    changed_value = allocations[changed_ticker]
 
-                # Update session state with final allocations (for next render)
+                    remaining = 100 - changed_value
+                    other_tickers = [t for t in allocations.keys() if t != changed_ticker]
+
+                    if len(other_tickers) == 1:
+                        allocations[other_tickers[0]] = max(0, remaining)
+                    else:
+                        other_total = sum(allocations[t] for t in other_tickers)
+                        if other_total > 0:
+                            scale_factor = remaining / other_total
+                            for ticker in other_tickers:
+                                allocations[ticker] = max(0, round(allocations[ticker] * scale_factor))
+
                 for ticker, pct in allocations.items():
                     st.session_state.selected_assets[ticker] = pct
+
+                total_allocation = sum(allocations.values())
 
                 # Get only assets with > 0 allocation
                 normalized_allocations = {k: v for k, v in allocations.items() if v > 0}
@@ -380,11 +394,15 @@ if user:
                         )
 
                     with metrics_cols[3]:
-                        # Calculate after-tax (15% capital gains)
-                        after_tax_gain = portfolio_results['total_gain_loss'] * 0.85
+                        # Calculate after-tax value (15% capital gains tax on gains only)
+                        # After-tax gain = total gain * (1 - tax rate)
+                        after_tax_gain = portfolio_results['total_gain_loss'] * (1 - 0.15)
+                        # After-tax portfolio value = initial + after-tax gain
+                        after_tax_value = portfolio_results['total_initial'] + after_tax_gain
                         st.metric(
                             label="After Taxes (15%)",
-                            value=f"${after_tax_gain:,.0f}"
+                            value=f"${after_tax_value:,.0f}",
+                            delta=f"${after_tax_gain:,.0f}"
                         )
 
                     st.divider()
