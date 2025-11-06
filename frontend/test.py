@@ -21,49 +21,13 @@ supabase = create_client(supabase_key=SUPABASE_KEY, supabase_url=SUPABASE_URL)
 storage = LocalStorage()
 
 ASSETS = {
-    # Stock ETFs - Large Cap & Broad Market
-    'stock_etfs': {
-        'VOO': {'name': 'Vanguard S&P 500 ETF', 'icon': '🇺🇸', 'category': 'Large-cap'},
-        'SPY': {'name': 'SPDR S&P 500 ETF', 'icon': '🇺🇸', 'category': 'Large-cap'},
-        'IVV': {'name': 'iShares Core S&P 500 ETF', 'icon': '🇺🇸', 'category': 'Large-cap'},
-        'VTI': {'name': 'Vanguard Total Stock Market', 'icon': '🇺🇸', 'category': 'Total market'},
-        'ITOT': {'name': 'iShares Core S&P Total US Stock', 'icon': '🇺🇸', 'category': 'Total market'},
-        'QQQ': {'name': 'Invesco QQQ Trust (Tech)', 'icon': '💻', 'category': 'Tech-heavy'},
-    },
-    # Sector ETFs
-    'sector_etfs': {
-        'VGT': {'name': 'Vanguard Info Tech ETF', 'icon': '💻', 'category': 'Technology'},
-        'VHT': {'name': 'Vanguard Healthcare ETF', 'icon': '🏥', 'category': 'Healthcare'},
-        'VFH': {'name': 'Vanguard Financials ETF', 'icon': '🏦', 'category': 'Financials'},
-        'VYM': {'name': 'Vanguard High Dividend Yield', 'icon': '💰', 'category': 'Dividend'},
-        'SCHD': {'name': 'Schwab US Dividend Equity ETF', 'icon': '💰', 'category': 'Dividend'},
-    },
-    # International & Diversification
-    'international': {
-        'VXUS': {'name': 'Vanguard Total Intl Stock ETF', 'icon': '🌍', 'category': 'International'},
-        'VEA': {'name': 'Vanguard FTSE Developed Markets', 'icon': '🌍', 'category': 'Developed markets'},
-        'VWO': {'name': 'Vanguard FTSE Emerging Markets', 'icon': '🌏', 'category': 'Emerging markets'},
-    },
-    # Fixed Income & Bonds
-    'bonds': {
-        'BND': {'name': 'Vanguard Total Bond Market ETF', 'icon': '📊', 'category': 'Bond'},
-        'AGG': {'name': 'iShares Core US Aggregate Bond', 'icon': '📊', 'category': 'Bond'},
-        'TLT': {'name': 'iShares 20+ Year Treasury Bond', 'icon': '📊', 'category': 'Long-term bonds'},
-    },
-    # Growth
-    'growth': {
-        'VUG': {'name': 'Vanguard Growth ETF', 'icon': '📈', 'category': 'Growth stocks'},
+    # Stock ETFs
+    'stock': {
+        'VOO': {'name': 'Vanguard S&P 500 ETF', 'icon': '🇺🇸', 'category': 'Stock'},
     },
     # Crypto
     'crypto': {
         'BTC': {'name': 'Bitcoin', 'icon': '₿', 'category': 'Cryptocurrency'},
-        'ETH': {'name': 'Ethereum', 'icon': '◈', 'category': 'Cryptocurrency'},
-    },
-    # Market Indices
-    'indices': {
-        'GSPC': {'name': 'S&P 500 Index', 'icon': '📈', 'category': 'Index'},
-        'DJI': {'name': 'Dow Jones Industrial Average', 'icon': '📈', 'category': 'Index'},
-        'IXIC': {'name': 'NASDAQ Composite', 'icon': '💻', 'category': 'Index'},
     }
 }
 
@@ -303,7 +267,7 @@ if user:
                 allocations = {}
 
                 for category_name, category_assets in ASSETS.items():
-                    with st.expander(f"{category_name.replace('_', ' ').title()}", expanded=(category_name in ['stock_etfs', 'crypto'])):
+                    with st.expander(f"{category_name.title()}", expanded=True):
                         for ticker, asset_info in category_assets.items():
                             # Get current allocation from session state
                             current_alloc = st.session_state.selected_assets.get(ticker, 0)
@@ -523,16 +487,14 @@ if user:
                     # Terms Explanation Section
                     with st.expander("📚 Investment Terms", expanded=False):
                         terms = {
-                            "ETF": "Exchange-Traded Fund - tracks an index or sector, trades like a stock",
-                            "Stock": "Ownership share in a company",
-                            "Bond": "Debt instrument - lender gives money, gets interest payments",
-                            "Crypto": "Digital currency secured by cryptography (Bitcoin, Ethereum)",
-                            "Dividend": "Company profits distributed to shareholders",
-                            "Volatility": "Measure of price fluctuations - higher = riskier",
+                            "ETF": "Exchange-Traded Fund - like VOO, it tracks an index and trades like a stock",
+                            "S&P 500": "An index of 500 large-cap U.S. companies - what VOO tracks",
+                            "Crypto": "Digital currency secured by cryptography - Bitcoin (BTC) is the largest",
+                            "Volatility": "Measure of price fluctuations - Bitcoin is more volatile than VOO",
                             "Return %": "Percentage gain/loss on your investment",
-                            "Large-cap": "Companies with large market capitalization (>$10B)",
-                            "Index": "Benchmark tracking basket of securities",
-                            "Portfolio": "Collection of investments you own",
+                            "Portfolio": "Your collection of VOO and BTC investments",
+                            "Diversification": "Mixing different assets (VOO + BTC) to reduce overall risk",
+                            "Allocation": "How you split your investment between VOO and BTC",
                         }
 
                         for term, definition in terms.items():
@@ -559,18 +521,16 @@ if user:
 
                         # Simple AI-like responses based on keywords
                         user_lower = user_input.lower()
-                        if any(word in user_lower for word in ['etf', 'fund', 'index']):
-                            ai_response = "ETFs are great for diversification! They track indexes or sectors and offer low fees. Would you like to know about specific ETFs available?"
+                        if any(word in user_lower for word in ['etf', 'fund', 'voo', 's&p']):
+                            ai_response = "VOO is a great low-cost ETF that tracks the S&P 500! It offers excellent diversification across 500 large-cap companies with a very low expense ratio of 0.03%."
                         elif any(word in user_lower for word in ['risk', 'safe', 'conservative']):
-                            ai_response = "Lower risk investing typically means bonds and large-cap stocks. Higher risk includes crypto and growth stocks. Your risk tolerance is key!"
+                            ai_response = "VOO is considered lower risk due to its broad diversification, while Bitcoin is highly volatile and carries significant risk. Your allocation between VOO and BTC should match your risk tolerance!"
                         elif any(word in user_lower for word in ['return', 'profit', 'gain']):
-                            ai_response = "Returns depend on your allocation and market performance. Diversification helps balance risk and reward. Use the dashboard to simulate different strategies!"
-                        elif any(word in user_lower for word in ['crypto', 'bitcoin', 'ethereum']):
-                            ai_response = "Cryptocurrency is highly volatile but can offer growth potential. Bitcoin (BTC) and Ethereum (ETH) are the largest by market cap. Consider your risk tolerance!"
-                        elif any(word in user_lower for word in ['bond', 'fixed', 'income']):
-                            ai_response = "Bonds provide stable income through interest payments. They're typically lower risk than stocks. BND and AGG are popular bond ETFs."
+                            ai_response = "Returns depend on your allocation and market performance. Use the dashboard to simulate different VOO/BTC allocations and see how they perform over time!"
+                        elif any(word in user_lower for word in ['crypto', 'bitcoin', 'btc']):
+                            ai_response = "Bitcoin (BTC) is a highly volatile but potentially rewarding digital asset. It's uncorrelated with stocks like VOO, which can provide diversification benefits. Consider your risk tolerance!"
                         else:
-                            ai_response = f"That's a great question about investing! Based on what you asked, I'd suggest exploring our terms section or trying different allocations in the dashboard to see the impact."
+                            ai_response = f"That's a great question! I'd suggest exploring our investment terms or trying different VOO/BTC allocations in the dashboard to see how they perform over time."
 
                         st.session_state.chat_messages.append({
                             "role": "assistant",
