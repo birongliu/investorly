@@ -4,6 +4,10 @@ Investorly is an investment portfolio dashboard, which aims to empower beginner 
 
 Investorly provides a clear, beginner-friendly dashboard that simplifies investing, builds confidence, and turns learning about finance into an approachable experience.
 
+## Contributions
+
+Please review the [Contributing Guidelines](CONTRIBUTING.md) for more information.
+
 ## Run the Project Locally (without Docker)
 
 ```
