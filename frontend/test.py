@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from streamlit_local_storage import LocalStorage
 from onboarding import show_onboarding, check_onboarding_status, reset_onboarding
+import requests
 
 # Add backend to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
@@ -17,6 +18,7 @@ from cleanData import load_etf_data, load_crypto_data, load_index_data, calculat
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000")
 supabase = create_client(supabase_key=SUPABASE_KEY, supabase_url=SUPABASE_URL)
 storage = LocalStorage()
 
@@ -162,6 +164,48 @@ def get_all_tickers():
     for category, assets in ASSETS.items():
         tickers.extend(list(assets.keys()))
     return sorted(tickers)
+
+def get_ai_response(messages):
+    """
+    Call the Flask backend to get AI chatbot response
+    
+    Args:
+        messages: List of message dictionaries with 'role' and 'content' keys
+    
+    Returns:
+        String response from the AI or fallback response on error
+    """
+    try:
+        response = requests.post(
+            f"{BACKEND_URL}/api/v1/llm",
+            json={"messages": messages},
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+        st.write(response)
+        if response.status_code == 200:
+            data = response.json()
+            messageAI = data.get("response", "I'm having trouble responding right now.")
+            return messageAI
+        
+    except Exception as e:
+        print(e)
+        # Fallback to keyword-based responses if backend is unreachable
+        return get_fallback_response(messages[-1]["content"])
+
+def get_fallback_response(user_input):
+    """Fallback keyword-based responses when backend is unavailable"""
+    user_lower = user_input.lower()
+    if any(word in user_lower for word in ['etf', 'fund', 'voo', 's&p']):
+        return "VOO is a great low-cost ETF that tracks the S&P 500! It offers excellent diversification across 500 large-cap companies with a very low expense ratio of 0.03%."
+    elif any(word in user_lower for word in ['risk', 'safe', 'conservative']):
+        return "VOO is considered lower risk due to its broad diversification, while Bitcoin is highly volatile and carries significant risk. Your allocation between VOO and BTC should match your risk tolerance!"
+    elif any(word in user_lower for word in ['return', 'profit', 'gain']):
+        return "Returns depend on your allocation and market performance. Use the dashboard to simulate different VOO/BTC allocations and see how they perform over time!"
+    elif any(word in user_lower for word in ['crypto', 'bitcoin', 'btc']):
+        return "Bitcoin (BTC) is a highly volatile but potentially rewarding digital asset. It's uncorrelated with stocks like VOO, which can provide diversification benefits. Consider your risk tolerance!"
+    else:
+        return f"That's a great question! I'd suggest exploring our investment terms or trying different VOO/BTC allocations in the dashboard to see how they perform over time."
 
 
 def getUser():
@@ -514,24 +558,18 @@ if user:
                     user_input = st.chat_input("Ask about investing...")
 
                     if user_input:
+                        # Add user message to chat history
                         st.session_state.chat_messages.append({
                             "role": "user",
                             "content": user_input
                         })
 
-                        # Simple AI-like responses based on keywords
-                        user_lower = user_input.lower()
-                        if any(word in user_lower for word in ['etf', 'fund', 'voo', 's&p']):
-                            ai_response = "VOO is a great low-cost ETF that tracks the S&P 500! It offers excellent diversification across 500 large-cap companies with a very low expense ratio of 0.03%."
-                        elif any(word in user_lower for word in ['risk', 'safe', 'conservative']):
-                            ai_response = "VOO is considered lower risk due to its broad diversification, while Bitcoin is highly volatile and carries significant risk. Your allocation between VOO and BTC should match your risk tolerance!"
-                        elif any(word in user_lower for word in ['return', 'profit', 'gain']):
-                            ai_response = "Returns depend on your allocation and market performance. Use the dashboard to simulate different VOO/BTC allocations and see how they perform over time!"
-                        elif any(word in user_lower for word in ['crypto', 'bitcoin', 'btc']):
-                            ai_response = "Bitcoin (BTC) is a highly volatile but potentially rewarding digital asset. It's uncorrelated with stocks like VOO, which can provide diversification benefits. Consider your risk tolerance!"
-                        else:
-                            ai_response = f"That's a great question! I'd suggest exploring our investment terms or trying different VOO/BTC allocations in the dashboard to see how they perform over time."
+                        # Show loading spinner while getting AI response
+                        with st.spinner("🤔 Thinking..."):
+                            # Get AI response from backend
+                            ai_response = get_ai_response(st.session_state.chat_messages)
 
+                        # Add AI response to chat history
                         st.session_state.chat_messages.append({
                             "role": "assistant",
                             "content": ai_response
