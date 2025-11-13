@@ -1,15 +1,25 @@
-from flask import Flask
-from routes.routes import bp
-from supabase import create_client
-import os
+from flask import Flask, request
+from os import getenv
 from dotenv import load_dotenv
-app = Flask(__name__)
+from flask_cors import cross_origin, CORS
 load_dotenv()
 
-database_and_auth = create_client(os.getenv("SUPABASE_URL", ""), os.getenv("SUPBASE_KEY", ""))
+app = Flask(__name__)
+from chat import Chat
 
-app.register_blueprint(bp)
+cors = CORS(app, origins=getenv("FRONTEND_URL"))
+chat_instance = Chat()
+
+
+@app.route("/api/v1/llm", methods=["POST"])
+@cross_origin(supports_credentials=True)
+def chat():
+   if not request.json:
+       return {"message": "Invalid request: JSON body required"}, 400
+   message = request.json.get("messages")[-1]['content']
+   return chat_instance.response(message), 200
+
 
 if __name__ == "__main__":
     # Development server
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
