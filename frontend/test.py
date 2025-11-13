@@ -158,7 +158,6 @@ def calculate_portfolio_returns(investment_amount, investment_date, allocations)
         return None, [str(e)]
 
 def get_all_tickers():
-    """Get all available tickers"""
     tickers = []
     for category, assets in ASSETS.items():
         tickers.extend(list(assets.keys()))
@@ -259,17 +258,16 @@ if user:
 
         st.divider()
 
-        # Create main layout: Left selector | Middle dashboard | Right panel
+        # main layout: Left selector | Middle dashboard | Right panel
         if st.session_state.right_panel_visible:
             left_col, middle_col, right_col = st.columns([2.2, 3.8, 2])
         else:
             left_col, middle_col, right_col = st.columns([2.2, 5.8, 0.1])
-        # LEFT PANEL - Investment Settings & Asset Allocation
+        # LEFT PANEL -> Investment Settings & Asset Allocation
         with left_col:
             with st.container(border=True):
                 st.subheader("💼 Investment Settings")
 
-                # Investment Amount
                 st.write("**Investment Amount**")
                 investment_amount = st.number_input(
                     "Investment Amount",
@@ -280,7 +278,6 @@ if user:
                 )
                 st.session_state.investment_amount = investment_amount
 
-                # Investment Date
                 st.write("**When you wish you invested**")
                 investment_date = st.date_input(
                     "Investment Date",
@@ -289,7 +286,6 @@ if user:
                 )
                 st.caption(f"📅 Simulates returns from {investment_date} to today")
 
-                # Risk Scale
                 st.write("**Risk Tolerance**")
                 risk_scale = st.slider(
                     "Risk Scale",
@@ -302,9 +298,9 @@ if user:
 
                 st.divider()
 
-                # Asset Allocation with Smart Auto-Adjustment
+                # Asset Allocation -> Independent sliders
                 st.write("**📊 Asset Allocation**")
-                st.caption("Drag sliders - they auto-adjust to stay at 100%")
+                st.caption("Set allocations independently - remaining % will be held as cash")
 
                 # Display asset selection with allocation
                 allocations = {}
@@ -315,18 +311,7 @@ if user:
                             # Get current allocation from session state
                             current_alloc = st.session_state.selected_assets.get(ticker, 0)
 
-                            # Display asset info with columns
-                            col1, col2 = st.columns([2.5, 1])
-
-                            with col1:
-                                # Show asset label clearly
-                                st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_info['name']}</span></div>", unsafe_allow_html=True)
-
-                            with col2:
-                                # Show current percentage
-                                st.markdown(f"<div style='padding: 12px 0; text-align: right'><b>{current_alloc}%</b></div>", unsafe_allow_html=True)
-
-                            # Slider with full range
+                            # Slider with full range - needs to beindependent, no auto-adjustment
                             alloc_pct = st.slider(
                                 f"{ticker}",
                                 min_value=0,
@@ -339,53 +324,42 @@ if user:
 
                             allocations[ticker] = alloc_pct
 
-                # Track which slider was just changed
-                changed_ticker = None
-                max_change = 0
-                for ticker in allocations.keys():
-                    current_alloc = st.session_state.selected_assets.get(ticker, 0)
-                    change = abs(allocations[ticker] - current_alloc)
-                    if change > max_change:
-                        max_change = change
-                        changed_ticker = ticker
+                            # Display asset info with columns AFTER slider to show current value
+                            col1, col2 = st.columns([2.5, 1])
 
-                # Smart auto-adjustment
-                if changed_ticker and len(allocations) > 1:
-                    changed_value = allocations[changed_ticker]
+                            with col1:
+                                # Show asset label clearly
+                                st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_info['name']}</span></div>", unsafe_allow_html=True)
 
-                    remaining = 100 - changed_value
-                    other_tickers = [t for t in allocations.keys() if t != changed_ticker]
+                            with col2:
+                                # Show current percentage - using alloc_pct which is the actual slider value
+                                st.markdown(f"<div style='padding: 12px 0; text-align: right'><b>{alloc_pct}%</b></div>", unsafe_allow_html=True)
 
-                    if len(other_tickers) == 1:
-                        allocations[other_tickers[0]] = max(0, remaining)
-                    else:
-                        other_total = sum(allocations[t] for t in other_tickers)
-                        if other_total > 0:
-                            scale_factor = remaining / other_total
-                            for ticker in other_tickers:
-                                allocations[ticker] = max(0, round(allocations[ticker] * scale_factor))
+                # Calculate total allocation
+                total_allocation = sum(allocations.values())
 
+                # Update session state with current allocations
                 for ticker, pct in allocations.items():
                     st.session_state.selected_assets[ticker] = pct
 
-                total_allocation = sum(allocations.values())
-
-                # Get only assets with > 0 allocation
+                # Get only assets with > 0 allocation for calculations
                 normalized_allocations = {k: v for k, v in allocations.items() if v > 0}
 
                 st.divider()
 
-                # Show allocation status
+                # Show allocation status with validation
                 if total_allocation > 100:
-                    st.warning(f"⚠️ Total: {total_allocation}% (exceeds 100%)")
-                elif total_allocation < 100:
-                    st.info(f"💡 {100 - total_allocation}% unallocated (cash)")
+                    st.error(f"❌ Total: {total_allocation}% (exceeds 100%! Please adjust.)")
+                elif total_allocation == 100:
+                    st.success(f"✅ 100% Allocated (no cash)")
                 else:
-                    st.success(f"✅ 100% Allocated")
+                    unallocated = 100 - total_allocation
+                    st.info(f"💡 {unallocated}% in Cash (unallocated)")
 
                 # Display allocation summary
-                if total_allocation > 0:
+                if total_allocation > 0 and total_allocation <= 100:
                     st.write("**Allocation Summary:**")
+                    # Show allocated assets
                     for ticker, pct in sorted(normalized_allocations.items(), key=lambda x: x[1], reverse=True):
                         if pct > 0:
                             asset_info = None
@@ -397,7 +371,26 @@ if user:
                                 # Progress bar for visual allocation
                                 st.write(f"{asset_info['icon']} {ticker}: {pct}%")
                                 st.progress(pct / 100, text=f"{pct}%")
-                else:
+
+                    # Show cash/unallocated portion
+                    if total_allocation < 100:
+                        unallocated = 100 - total_allocation
+                        st.write(f"💰 Cash: {unallocated}%")
+                        st.progress(unallocated / 100, text=f"{unallocated}%")
+                elif total_allocation > 100:
+                    st.write("**Allocation Summary:**")
+                    st.warning("⚠️ Total exceeds 100% - please reduce some allocations")
+                    # Still show the allocations so user can see what needs adjusting
+                    for ticker, pct in sorted(allocations.items(), key=lambda x: x[1], reverse=True):
+                        if pct > 0:
+                            asset_info = None
+                            for cat, assets in ASSETS.items():
+                                if ticker in assets:
+                                    asset_info = assets[ticker]
+                                    break
+                            if asset_info:
+                                st.write(f"{asset_info['icon']} {ticker}: {pct}%")
+                elif total_allocation == 0:
                     st.warning("⚠️ Please select at least one asset")
                     normalized_allocations = {}
 
@@ -415,34 +408,45 @@ if user:
                 st.subheader("📊 Portfolio Performance")
 
                 if portfolio_results:
+                    # Calculate unallocated cash (same as we show in left panel)
+                    unallocated_pct = 100 - total_allocation
+                    unallocated_cash = (unallocated_pct / 100) * investment_amount
+
+                    # Total current value = invested asset values + unallocated cash
+                    total_current_with_cash = portfolio_results['total_current'] + unallocated_cash
+
+                    # Total gain/loss on the entire portfolio
+                    total_gain_loss = total_current_with_cash - investment_amount
+                    total_gain_loss_pct = (total_gain_loss / investment_amount) * 100 if investment_amount > 0 else 0
+
                     # Key Metrics
                     metrics_cols = st.columns(4)
 
                     with metrics_cols[0]:
                         st.metric(
                             label="Initial Investment",
-                            value=f"${portfolio_results['total_initial']:,.0f}",
+                            value=f"${investment_amount:,.0f}",
                         )
 
                     with metrics_cols[1]:
                         st.metric(
                             label="Current Value",
-                            value=f"${portfolio_results['total_current']:,.0f}",
-                            delta=f"${portfolio_results['total_gain_loss']:,.0f}"
+                            value=f"${total_current_with_cash:,.0f}",
+                            delta=f"${total_gain_loss:,.0f}"
                         )
 
                     with metrics_cols[2]:
                         st.metric(
                             label="Total Return",
-                            value=f"{portfolio_results['total_gain_loss_pct']:.2f}%"
+                            value=f"{total_gain_loss_pct:.2f}%"
                         )
 
                     with metrics_cols[3]:
                         # Calculate after-tax value (15% capital gains tax on gains only)
                         # After-tax gain = total gain * (1 - tax rate)
-                        after_tax_gain = portfolio_results['total_gain_loss'] * (1 - 0.15)
+                        after_tax_gain = total_gain_loss * (1 - 0.15)
                         # After-tax portfolio value = initial + after-tax gain
-                        after_tax_value = portfolio_results['total_initial'] + after_tax_gain
+                        after_tax_value = investment_amount + after_tax_gain
                         st.metric(
                             label="After Taxes (15%)",
                             value=f"${after_tax_value:,.0f}",
@@ -453,7 +457,13 @@ if user:
 
                     # Asset Breakdown
                     st.write("**Asset Breakdown:**")
-                    breakdown_cols = st.columns(min(len(portfolio_results['breakdown']), 4))
+
+                    # Count assets + cash if unallocated
+                    num_items = len(portfolio_results['breakdown'])
+                    if unallocated_cash > 0:
+                        num_items += 1
+
+                    breakdown_cols = st.columns(min(num_items, 4))
 
                     for idx, (asset, data) in enumerate(sorted(portfolio_results['breakdown'].items(), key=lambda x: x[1]['current'], reverse=True)):
                         with breakdown_cols[idx % len(breakdown_cols)]:
@@ -463,6 +473,15 @@ if user:
                             st.write(f"Current: ${data['current']:,.0f}")
                             st.write(f"Gain/Loss: ${data['gain_loss']:,.0f}")
                             st.write(f"Return: {data['gain_loss_pct']:.2f}%")
+
+                    # Show unallocated cash if any
+                    if unallocated_cash > 0:
+                        with breakdown_cols[len(portfolio_results['breakdown']) % len(breakdown_cols)]:
+                            st.write("**💰 Cash**")
+                            st.write(f"Initial: ${unallocated_cash:,.0f}")
+                            st.write(f"Current: ${unallocated_cash:,.0f}")
+                            st.write(f"Gain/Loss: $0")
+                            st.write(f"Return: 0.00%")
 
                     st.divider()
 
@@ -531,12 +550,11 @@ if user:
                             st.warning(f"⚠️ {error}")
                     st.info("💡 Select at least one asset and a valid investment date to see results")
 
-        # RIGHT PANEL - AI Chat & Education
+        # RIGHT PANEL - AI Chat 
         with right_col:
             if st.session_state.right_panel_visible:
                 # AI Chatbot with Terms Explanation
                 with st.container(border=True):
-                    # Header with hide button
                     header_col1, header_col2 = st.columns([1, 3])
                     with header_col2:
                         st.subheader("🤖 Assistant")
@@ -546,7 +564,6 @@ if user:
                             st.session_state.right_panel_visible = False
                             st.rerun()
 
-                    # Terms Explanation Section
                     with st.expander("📚 Investment Terms", expanded=False):
                         terms = {
                             "ETF": "Exchange-Traded Fund - like VOO, it tracks an index and trades like a stock",
@@ -565,18 +582,15 @@ if user:
 
                     st.divider()
 
-                    # Chat container
                     chat_container = st.container(height=300)
                     with chat_container:
                         for message in st.session_state.chat_messages:
                             with st.chat_message(message["role"]):
                                 st.write(message["content"])
 
-                    # Chat input
                     user_input = st.chat_input("Ask about investing...")
 
                     if user_input:
-                        # Add user message to chat history
                         st.session_state.chat_messages.append({
                             "role": "user",
                             "content": user_input
@@ -599,7 +613,6 @@ if user:
                         st.session_state.chat_messages = []
                         st.rerun()
             else:
-                # Show button when panel is hidden
                 if st.button("▶", key="show_panel", use_container_width=True):
                     st.session_state.right_panel_visible = True
                     st.rerun()
