@@ -7,7 +7,7 @@ import sys
 import pandas as pd
 from datetime import datetime, timedelta
 from streamlit_local_storage import LocalStorage
-from onboarding import show_onboarding, check_onboarding_status, reset_onboarding
+from questionnaire import show_questionnaire, check_questionnaire_status, reset_questionnaire
 import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
@@ -56,7 +56,6 @@ if 'last_total_allocation' not in st.session_state:
 if 'last_risk_scale' not in st.session_state:
     st.session_state.last_risk_scale = 5
 
-# Configure page
 st.set_page_config(
     page_title="Investorly Dashboard",
     page_icon="📈",
@@ -65,7 +64,6 @@ st.set_page_config(
 )
 
 def get_asset_type(ticker):
-    """Determine asset type"""
     for category, assets in ASSETS.items():
         if ticker in assets:
             if category == 'crypto':
@@ -92,7 +90,7 @@ def load_data_safe(ticker):
         return None
 
 def calculate_portfolio_returns(investment_amount, investment_date, allocations):
-    """Calculate returns for a portfolio with multiple allocations"""
+    # Calculate returns for a portfolio with multiple allocations
     try:
         total_current_value = 0
         total_gain_loss = 0
@@ -105,23 +103,19 @@ def calculate_portfolio_returns(investment_amount, investment_date, allocations)
 
             dollar_amount = (percentage / 100) * investment_amount
 
-            # Load data
             df = load_data_safe(asset)
             if df is None:
                 errors.append(f"Could not load data for {asset}")
                 continue
 
-            # Filter from investment date
             df_filtered = filter_by_date_range(df, start_date=str(investment_date))
             if df_filtered.empty:
                 errors.append(f"No data available for {asset} from {investment_date}")
                 continue
 
-            # Calculate returns
             df_returns = calculate_returns(df_filtered, initial_investment=dollar_amount)
             metrics = get_performance_metrics(df_returns)
 
-            # Get asset display info
             asset_info = None
             for category, assets in ASSETS.items():
                 if asset in assets:
@@ -192,6 +186,58 @@ def get_ai_response(messages):
         # Fallback to keyword-based responses if backend is unreachable
         return get_fallback_response(messages[-1]["content"])
 
+def get_risk_from_allocation(voo_pct, btc_pct):
+    """
+    Calculate the implied risk level (1-10) from the current allocation.
+
+    Logic:
+    - High VOO, Low BTC → Conservative (1-3)
+    - Balanced VOO/BTC → Moderate (4-6)
+    - Low VOO, High BTC → Aggressive (7-10)
+
+    Args:
+        voo_pct: VOO allocation percentage (0-100)
+        btc_pct: BTC allocation percentage (0-100)
+
+    Returns:
+        int: Risk level (1-10)
+    """
+    # Calculate the ratio: higher BTC % means higher risk
+    total_invested = voo_pct + btc_pct
+
+    if total_invested == 0:
+        return 5  # Default to moderate if no allocation
+
+    btc_ratio = btc_pct / total_invested  # 0 to 1
+
+    # Map BTC ratio to risk level
+    # 0% BTC → Risk 1
+    # 25% BTC → Risk 4
+    # 50% BTC → Risk 5
+    # 75% BTC → Risk 8
+    # 100% BTC → Risk 10
+
+    if btc_ratio <= 0.1:
+        return 1
+    elif btc_ratio <= 0.2:
+        return 2
+    elif btc_ratio <= 0.3:
+        return 3
+    elif btc_ratio <= 0.4:
+        return 4
+    elif btc_ratio <= 0.5:
+        return 5
+    elif btc_ratio <= 0.6:
+        return 6
+    elif btc_ratio <= 0.7:
+        return 7
+    elif btc_ratio <= 0.8:
+        return 8
+    elif btc_ratio <= 0.9:
+        return 9
+    else:
+        return 10
+
 def get_risk_based_allocation(risk_level):
     """
     Calculate suggested asset allocations based on risk tolerance (1-10 scale).
@@ -261,9 +307,8 @@ user = getUser()
 
 if user:
     # Check if user has completed questionnaire
-    if not check_onboarding_status():
-        # Show questionnaire flow
-        show_onboarding()
+    if not check_questionnaire_status():
+        show_questionnaire()
     else:
         # custom CSS 
         st.markdown("""
@@ -321,14 +366,19 @@ if user:
                 st.subheader("💼 Investment Settings")
 
                 st.write("**Investment Amount**")
+                # Ensure investment_amount is an integer
+                current_amount = st.session_state.investment_amount
+                if isinstance(current_amount, str):
+                    current_amount = int(current_amount) if current_amount else 10000
+
                 investment_amount = st.number_input(
                     "Investment Amount",
                     min_value=100,
-                    value=st.session_state.investment_amount,
+                    value=current_amount,
                     step=1000,
                     label_visibility="collapsed"
                 )
-                st.session_state.investment_amount = investment_amount
+                st.session_state.investment_amount = int(investment_amount)
 
                 st.write("**When you wish you invested**")
                 investment_date = st.date_input(
@@ -359,7 +409,6 @@ if user:
                     # Force rerun to update all dependent values
                     st.rerun()
 
-                # Show risk description
                 risk_descriptions = {
                     1: "🛡️ Very Conservative - Prioritize stability",
                     2: "🛡️ Conservative - Lower volatility",
@@ -380,23 +429,11 @@ if user:
                 st.write("**📊 Asset Allocation**")
                 st.caption("Set allocations independently - remaining % will be held as cash")
 
-                # Show current risk-based allocation (auto-applied)
+                # Placeholder for Current Allocation display (will be updated after sliders)
+                allocation_display_placeholder = st.empty()
+
                 suggested_alloc = get_risk_based_allocation(risk_scale)
 
-                with st.expander(f"📊 Current Allocation (Auto-adjusted by Risk Level)", expanded=True):
-                    st.markdown("**Your allocations automatically adjust based on your risk tolerance:**")
-                    alloc_display_cols = st.columns(3)
-
-                    with alloc_display_cols[0]:
-                        st.metric("VOO", f"{suggested_alloc['VOO']}%")
-                    with alloc_display_cols[1]:
-                        st.metric("BTC", f"{suggested_alloc['BTC']}%")
-                    with alloc_display_cols[2]:
-                        st.metric("Cash", f"{suggested_alloc['cash']}%")
-
-                    st.caption("💡 Change the Risk Tolerance slider above to see allocations update automatically")
-
-                # Display asset selection with sliders
                 allocations = {}
 
                 st.write("**Adjust Allocations (Optional)**")
@@ -405,11 +442,12 @@ if user:
                 for category_name, category_assets in ASSETS.items():
                     with st.expander(f"{category_name.title()}", expanded=True):
                         for ticker, asset_info in category_assets.items():
-                            # Get the stored allocation from session state
                             current_alloc = st.session_state.selected_assets.get(ticker, 0)
+                            if isinstance(current_alloc, str):
+                                current_alloc = int(current_alloc) if current_alloc else 0
 
                             # Slider with full range - user can override risk-based allocation
-                            # Include risk_scale in key so sliders reset when risk changes
+                            # include risk_scale in key so sliders reset when risk changes
                             alloc_pct = st.slider(
                                 f"{ticker}",
                                 min_value=0,
@@ -420,31 +458,56 @@ if user:
                                 key=f"alloc_{ticker}_{risk_scale}"
                             )
 
-                            # Store slider value back to session state
                             st.session_state.selected_assets[ticker] = alloc_pct
                             allocations[ticker] = alloc_pct
 
-                            # Display asset info with columns AFTER slider to show current value
                             col1, col2 = st.columns([2.5, 1])
 
                             with col1:
-                                # Show asset label clearly
                                 st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_info['name']}</span></div>", unsafe_allow_html=True)
 
                             with col2:
-                                # Show current percentage and highlight if different from risk-based
                                 risk_based_pct = suggested_alloc.get(ticker, 0)
                                 if alloc_pct != risk_based_pct and risk_based_pct > 0:
-                                    # User has overridden the risk-based suggestion
                                     st.markdown(f"<div style='padding: 12px 0; text-align: right'><b style='color: #FFA500'>{alloc_pct}%</b><br/><span style='font-size: 0.75em; color: #999'>Risk: {risk_based_pct}%</span></div>", unsafe_allow_html=True)
                                 else:
                                     st.markdown(f"<div style='padding: 12px 0; text-align: right'><b>{alloc_pct}%</b></div>", unsafe_allow_html=True)
 
-                # Calculate total allocation
                 total_allocation = sum(allocations.values())
 
-                # Get only assets with > 0 allocation for calculations
                 normalized_allocations = {k: v for k, v in allocations.items() if v > 0}
+
+                # update the Current Allocation display with actual slider values
+                current_voo = allocations.get('VOO', 0)
+                current_btc = allocations.get('BTC', 0)
+                current_cash = 100 - total_allocation
+
+                with allocation_display_placeholder.container():
+                    with st.expander(f"📊 Current Allocation (Auto-adjusted by Risk Level)", expanded=True):
+                        st.markdown("**Your allocations automatically adjust based on your risk tolerance:**")
+                        alloc_display_cols = st.columns(3)
+
+                        with alloc_display_cols[0]:
+                            st.metric("VOO", f"{current_voo}%")
+                        with alloc_display_cols[1]:
+                            st.metric("BTC", f"{current_btc}%")
+                        with alloc_display_cols[2]:
+                            st.metric("Cash", f"{current_cash}%")
+
+                        st.caption("💡 Adjust sliders below to update allocations")
+
+                # Detect manual slider changes and update risk level accordingly
+                current_risk = get_risk_from_allocation(allocations.get('VOO', 0), allocations.get('BTC', 0))
+
+                # Check if allocations differ from risk-based suggestion
+                risk_based_voo = suggested_alloc['VOO']
+                risk_based_btc = suggested_alloc['BTC']
+                user_overrode = (allocations.get('VOO', 0) != risk_based_voo) or (allocations.get('BTC', 0) != risk_based_btc)
+
+                # If user manually changed allocations, update the risk slider
+                if user_overrode and current_risk != risk_scale:
+                    st.session_state.risk_scale = current_risk
+                    st.session_state.last_risk_scale = current_risk
 
                 st.divider()
 
