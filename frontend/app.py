@@ -20,6 +20,14 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000")
 supabase = create_client(supabase_key=SUPABASE_KEY, supabase_url=SUPABASE_URL)
 storage = LocalStorage()
 
+investment_map = {
+    "$0 - $1,000": 500,
+    "$1,000 - $5,000": 3000,
+    "$5,000 - $10,000": 7500,
+    "$10,000 - $50,000": 30000,
+    "$50,000+": 50000
+}
+
 ASSETS = {
     # Stock ETFs
     'stock': {
@@ -369,7 +377,7 @@ if user:
                 # Ensure investment_amount is an integer
                 current_amount = st.session_state.investment_amount
                 if isinstance(current_amount, str):
-                    current_amount = int(current_amount) if current_amount else 10000
+                    current_amount = investment_map.get(current_amount, 10000)
 
                 investment_amount = st.number_input(
                     "Investment Amount",
