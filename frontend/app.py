@@ -275,6 +275,15 @@ def get_risk_based_allocation(risk_level):
         # Extremely Aggressive: 10% VOO, 80% BTC, 10% Cash (min cash for safety)
         return {'VOO': 10, 'BTC': 80, 'cash': 10}
 
+
+investment_map = {
+    "$0 - $1,000": 500,
+    "$1,000 - $5,000": 3000,
+    "$5,000 - $10,000": 7500,
+    "$10,000 - $50,000": 30000,
+    "$50,000+": 50000
+}
+
 def get_fallback_response(user_input):
     user_lower = user_input.lower()
     if any(word in user_lower for word in ['etf', 'fund', 'voo', 's&p']):
@@ -369,7 +378,7 @@ if user:
                 # Ensure investment_amount is an integer
                 current_amount = st.session_state.investment_amount
                 if isinstance(current_amount, str):
-                    current_amount = int(current_amount) if current_amount else 10000
+                    current_amount = investment_map.get(current_amount, 1000)
 
                 investment_amount = st.number_input(
                     "Investment Amount",
