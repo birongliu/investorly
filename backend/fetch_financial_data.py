@@ -119,7 +119,7 @@ def fetch_essential_assets():
         print("SUCCESS! Your data is ready!")
         print("\nNext steps:")
         print("   1. Run your Streamlit dashboard:")
-        print("      streamlit run ../frontend/app.py")
+        print("      streamlit run ../frontend/test.py")
     else:
         print("Some downloads failed. Check your internet connection.")
 
