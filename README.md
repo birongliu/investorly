@@ -21,12 +21,20 @@ Please review the [Contributing Guidelines](CONTRIBUTING.md) for more informatio
 python3 -m venv .venv
 source .venv/bin/activate
 
+make a copy of .env.example 
+rename .env.example to .env
+fill in the credentials
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the application
-cd frontend/
-streamlit run test.py
+# Run the backend application
+cd backend
+python app.py 
+
+# Run the frontend application
+cd frontend
+streamlit run app.py
 ```
 
 ## TODO: Run the Project with Docker
