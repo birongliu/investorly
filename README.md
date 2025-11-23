@@ -16,6 +16,7 @@ Please review the [Contributing Guidelines](CONTRIBUTING.md) for more informatio
 
 ## Run the Project Locally (without Docker)
 
+### Install dependencies
 ```
 # create and activate a virtual environment (macOS/Linux)
 python3 -m venv .venv
@@ -23,10 +24,27 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
-# Run the application
+### Run the backend
+
+1. Create the .env file in backend/ and set environment variables:
+
+```
+GROQ_TOKEN=[your_groq_token]
+```
+
+2. Run the backend server:
+```bash
+cd backend
+python app.py
+```
+
+### Run the frontend
+
+```bash
 cd frontend/
-streamlit run test.py
+streamlit run app.py
 ```
 
 ## TODO: Run the Project with Docker
