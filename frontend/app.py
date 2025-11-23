@@ -638,7 +638,7 @@ else:
                             asset_info = data.get('info', {})
                             st.write(f"**{asset_info.get('icon', '📊')} {asset} Performance**")
                             chart_data = data['data'].set_index('Date')['Portfolio_Value']
-                            st.line_chart(chart_data, use_container_width=True, height=200)
+                            st.line_chart(chart_data, width='stretch', height=200)
 
                             current = data['data']['Portfolio_Value'].iloc[-1]
                             gain = data['data']['Gain_Loss'].iloc[-1]
@@ -653,7 +653,7 @@ else:
                                 asset_info = data.get('info', {})
                                 st.write(f"**{asset_info.get('icon', '📊')} {asset} Performance**")
                                 chart_data = data['data'].set_index('Date')['Portfolio_Value']
-                                st.line_chart(chart_data, use_container_width=True, height=200)
+                                st.line_chart(chart_data, width='stretch', height=200)
 
                                 current = data['data']['Portfolio_Value'].iloc[-1]
                                 gain = data['data']['Gain_Loss'].iloc[-1]
@@ -678,10 +678,10 @@ else:
 
                     if combined_data is not None:
                         # Fill NaN appropriately
-                        combined_data = combined_data.fillna(method='ffill').fillna(0)
+                        combined_data = combined_data.ffill().fillna(0)
                         combined_data['Total'] = combined_data.sum(axis=1)
 
-                        st.line_chart(combined_data[['Total']], use_container_width=True, height=300)
+                        st.line_chart(combined_data[['Total']], width='stretch', height=300)
 
             else:
                 if errors:
@@ -699,7 +699,7 @@ else:
                     st.subheader("🤖 Assistant")
                 with header_col1:
                     st.write("")
-                    if st.button("◀", key="hide_panel", use_container_width=True):
+                    if st.button("◀", key="hide_panel", width='stretch'):
                         st.session_state.right_panel_visible = False
                         st.rerun()
 
@@ -748,6 +748,6 @@ else:
 
                     st.rerun()
 
-                if st.button("Clear Chat", use_container_width=True, key="clear_chat"):
+                if st.button("Clear Chat", width='stretch', key="clear_chat"):
                     st.session_state.chat_messages = []
                     st.rerun()
