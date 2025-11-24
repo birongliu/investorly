@@ -372,7 +372,10 @@ else:
     with left_col:
         with st.container(border=True):
             st.subheader("💼 Investment Settings")
-
+            if not st.session_state.right_panel_visible:
+                if st.button("Open Chat", key="open_panel", width="stretch"):
+                        st.session_state.right_panel_visible = True
+                        st.rerun()
             st.write("**Investment Amount**")
             # Ensure investment_amount is an integer
             current_amount = st.session_state.investment_amount
@@ -718,6 +721,18 @@ else:
                     for term, definition in terms.items():
                         with st.expander(term):
                             st.write(definition)
+
+
+                with st.expander("How to invest?", expanded=False):
+                    investment_guide = {
+                        "Schwab": "https://www.schwab.com/how-to-invest",
+                        "fidelity": "https://www.fidelity.com/learning-center/trading-investing/investing-for-beginners",
+                        "robinhood": "https://robinhood.com/us/en/learn/investing-101/"
+                    }
+
+                    for company, url in investment_guide.items():
+                        with st.expander(company):
+                            st.write(url)
 
                 st.divider()
 
