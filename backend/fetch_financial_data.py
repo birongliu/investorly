@@ -105,7 +105,7 @@ def fetch_essential_assets():
 
     # Fetch BTC (Crypto)
     print("Fetching BTC-USD (Bitcoin)...")
-    if fetch_and_save_ticker('BTC-USD', period='5y', filename='crypto_btc.csv'):
+    if fetch_and_save_ticker('BTC-USD', period='10y', filename='crypto_btc.csv'):
         successful += 1
     print()
 
