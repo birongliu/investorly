@@ -74,3 +74,31 @@ The purpose of our code reviews is to
 - ensure that the codebase is consistent and maintainable
 - catch bugs early
 - learn from each other and understand the codebase better
+
+### Run and test a contributor's pull request locally
+
+#### Option 1: Add the contributor's fork as a remote
+
+```bash
+# Add the contributor's fork as a remote
+git remote add [CONTRIBUTOR_NAME] https://github.com/[CONTRIBUTOR_GITHUB_USERNAME]/investorly.git
+
+# Fetch their branches from their fork
+git fetch [CONTRIBUTOR_NAME]
+
+# Check out their PR branch
+git checkout -b [BRANCH_NAME] [CONTRIBUTOR_GITHUB_USERNAME]/[BRANCH_NAME]
+```
+
+Install dependencies if they updated the dependencies.
+Then, run and test the project.
+
+#### Option 2: Use the GitHub “pull/ID/head” trick
+
+```bash
+git fetch upstream pull/[PR_NUMBER]/head:pr-[PR_NUMBER]
+git checkout pr-[PR_NUMBER]
+```
+
+Install dependencies if they updated the dependencies.
+Then, run and test the project.
