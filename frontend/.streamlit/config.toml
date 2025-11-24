@@ -1,11 +1,11 @@
-[theme]
+# [theme]
 # Spotify Green for primary interactive elements
-primaryColor = "#1DB954" 
+# primaryColor = "#1DB954"
 # Dark background color for the main content area
-backgroundColor = "#191414"
+# backgroundColor = "#191414"
 # Slightly lighter dark for sidebar and other interactive widgets
-secondaryBackgroundColor = "#282828"
+# secondaryBackgroundColor = "#282828"
 # Light text color for contrast
-textColor = "#FFFFFF"
+# textColor = "#FFFFFF"
 # Font family (you can experiment with others or stick to sans serif)
-font = "sans serif" 
+# font = "sans serif"
