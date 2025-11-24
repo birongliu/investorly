@@ -14,9 +14,32 @@ Investorly provides a clear, beginner-friendly dashboard that simplifies investi
 
 Please review the [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
-## Run the Project Locally (without Docker)
+## Run the Project (with Docker)
 
-### Install dependencies
+### 1. Install Docker
+https://www.docker.com/
+
+### 2. Build and run the project
+
+```bash
+# Build images
+docker compose build
+
+# Run containers
+docker compose up
+```
+
+```bash
+# Run containers in the background
+docker compose up -d
+
+# Stop containers
+docker compose down
+```
+
+## Run the Project (without Docker)
+
+### 1. Install dependencies
 ```
 # create and activate a virtual environment (macOS/Linux)
 python3 -m venv .venv
@@ -26,7 +49,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Run the backend
+### 2. Run the backend
 
 1. Create the .env file in backend/ and set environment variables:
 
@@ -36,15 +59,11 @@ GROQ_TOKEN=[your_groq_token]
 
 2. Run the backend server:
 ```bash
-cd backend
-python app.py
+python ./backend/app.py
 ```
 
-### Run the frontend
+### 3. Run the frontend
 
 ```bash
-cd frontend/
-streamlit run app.py
+streamlit run ./frontend/app.py
 ```
-
-## TODO: Run the Project with Docker

@@ -16,7 +16,7 @@ from cleanData import load_etf_data, load_crypto_data, load_index_data, calculat
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000")
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:5000")
 supabase = create_client(supabase_key=SUPABASE_KEY, supabase_url=SUPABASE_URL)
 storage = LocalStorage()
 
@@ -178,7 +178,7 @@ def get_ai_response(messages):
     """
     try:
         response = requests.post(
-            f"{BACKEND_URL}/api/v1/llm",
+            f"{BACKEND_BASE_URL}/api/v1/llm",
             json={"messages": messages},
             headers={"Content-Type": "application/json"},
             timeout=30
