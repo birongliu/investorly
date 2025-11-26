@@ -1,14 +1,21 @@
 # Investorly
 
-Investorly is an investment portfolio dashboard, which aims to empower beginner investors who may feel overwhelmed by complex financial language and uncertain about where to start.
+Investorly — An investment portfolio dashboard for beginners to learn investing.
 
-Investorly provides a clear, beginner-friendly dashboard that simplifies investing, builds confidence, and turns learning about finance into an approachable experience.
-
-![Investorly Dashboard](https://github.com/user-attachments/assets/0fa3e93e-c681-4a70-8076-1dcaf4a1167c)
+![Investorly Dashboard](https://github.com/user-attachments/assets/fac1c10b-511b-43a0-8e44-1af07b427b15)
 
 ## Tech Stack
 
-![Tech Stack](https://github.com/user-attachments/assets/5249cf14-4076-45d1-af60-be6afb59fd61)
+- Frontend/UI:
+  - Streamlit
+- Backend/API:
+  - Python
+  - Flask
+  - LLM
+- Deployment:
+  - Docker
+  - Linux
+  - Nginx
 
 ## Contributions
 
@@ -16,10 +23,18 @@ Please review the [Contributing Guidelines](CONTRIBUTING.md) for more informatio
 
 ## Run the Project (with Docker)
 
-### 1. Install Docker
+### 1. Set up environment variables
+
+Create the .env file in backend/ and set environment variables:
+
+```
+GROQ_TOKEN=[your_groq_token]
+```
+
+### 2. Install Docker
 https://www.docker.com/
 
-### 2. Build and run the project
+### 3. Build and run the project
 
 ```bash
 # Build images

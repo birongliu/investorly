@@ -65,7 +65,7 @@ if 'last_risk_scale' not in st.session_state:
     st.session_state.last_risk_scale = 5
 
 st.set_page_config(
-    page_title="Investorly Dashboard",
+    page_title="Investorly",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -356,7 +356,7 @@ else:
     # sign up/log in buttons
     header_cols = st.columns([4, 1, 1])
     with header_cols[0]:
-        st.title("📈 Investorly Dashboard")
+        st.title("📈 Investorly")
     with header_cols[2]:
         if logout_button("log in"):
             st.rerun()
@@ -706,28 +706,63 @@ else:
                         st.session_state.right_panel_visible = False
                         st.rerun()
 
-                with st.expander("📚 Investment Terms", expanded=False):
-                    terms = {
-                        "ETF": "Exchange-Traded Fund - like VOO, it tracks an index and trades like a stock",
-                        "S&P 500": "An index of 500 large-cap U.S. companies - what VOO tracks",
-                        "Crypto": "Digital currency secured by cryptography - Bitcoin (BTC) is the largest",
-                        "Volatility": "Measure of price fluctuations - Bitcoin is more volatile than VOO",
-                        "Return %": "Percentage gain/loss on your investment",
-                        "Portfolio": "Your collection of VOO and BTC investments",
-                        "Diversification": "Mixing different assets (VOO + BTC) to reduce overall risk",
-                        "Allocation": "How you split your investment between VOO and BTC",
+                with st.expander("Basics of Investing", expanded=False):
+                    basics_of_investing = {
+                        "What Is Investing?": "Investing involves allocating money or resources into assets with the expectation of generating a profit or income over time. Unlike saving, which typically involves placing money into low-yield, low-risk accounts like savings accounts or certificates of deposit, investing aims for higher returns through various financial instruments.",
+                        "Why Invest?": "- Build Wealth: Grow your savings exponentially over time.\n- Achieve Financial Goals: Save for retirement, education, or purchasing property.\n- Beat Inflation: Protect your purchasing power from erosion.\n- Create Passive Income: Generate income streams that require minimal ongoing effort.",
+                        "The Power of Compound Growth": "One of the most compelling reasons to start investing early is the power of compound interest — earning returns on your returns. Over time, this exponential growth can significantly boost your wealth.\n\nExample:\n\nIf you invest 10,000 at an annual return of 10% (e.g., S&P 500 ETFs), after 30 years, your investment would grow to approximately $174,494, thanks to compound interest. Compound interest formula: A=P(1+r/n)^nt",
+                        "Risk and Return": "All investments carry some level of risk. Generally, higher potential returns come with increased risk. Understanding your risk tolerance — how much risk you're willing and able to accept — is crucial to crafting an appropriate investment plan.\n\nRisk Spectrum:\n- Low Risk: Savings accounts, government bonds\n- Moderate Risk: Corporate bonds, index funds\n- High Risk: Individual stocks, cryptocurrencies, startups",
+                        "Building a Diversified Portfolio": "Diversification is key to managing risk. Diversification helps mitigate risks because different assets often react differently to economic events. For example, when stocks decline, bonds may hold steady or even increase, balancing your portfolio.\n\nAsset allocation is key to balance. Asset allocation involves dividing your investments among different categories to align with your goals and risk appetite.\n\nSample Asset Allocation for a Moderate Investor:\n- 60% ETFs\n- 25% Bonds\n- 10% Real Estate\n- 5% Cash"
+                    }
+                    for topic, content in basics_of_investing.items():
+                        with st.expander(topic):
+                            st.write(content)
+
+                with st.expander("Core Investment Vehicles", expanded=False):
+                    investment_vehicles = {
+                        # can I do markdown inside expander?
+                        "Stocks (Equities)": "- Ownership in companies.\n- Potential for high returns, and dividend income.\n- Volatile; prices fluctuate with market conditions.",
+                        "Exchange-Traded Funds (ETFs)": "- Trade all day like stocks.\n- Usually passively managed, tracking indices, such as the S&P 500.\n- Cost-effective and flexible. Taxed only when you sell. Ideal for long-term investors seeking market-average returns.",
+                        "Mutual Funds": "- Pooled investments managed by professionals.\n- Offer diversification across many securities, such as stocks and bonds.\n- Mutual funds create yearly taxable capital-gain distributions from the fund's internal trading.",
+                        "Bonds (Fixed-Income Securities)": "- Loans to governments or corporations.\n- Usually offer steady income through interest payments.\n- Less risky than stocks but with lower returns.",
+                        "Real Estate": "- Physical property investments. Options include direct property ownership or real estate investment trusts (REITs).\n- Generate rental income and appreciation.\n- Require significant capital and management.",
+                        "Commodities": "- Physical goods like gold, oil, or agricultural products.\n- Often used for diversification and hedging.",
+                        "Cryptocurrencies": "- Digital assets like Bitcoin and Ethereum.\n- High risk and volatility.\n- Suitable for a small portion of a diversified portfolio."
                     }
 
-                    for term, definition in terms.items():
-                        with st.expander(term):
-                            st.write(definition)
+                    for vehicle, description in investment_vehicles.items():
+                        with st.expander(vehicle):
+                            st.write(description)
 
+                with st.expander("Retirement Accounts (Tax-Advantaged Investing)", expanded=False):
+                    retirement_accounts = {
+                        "401(k)": "Employer-sponsored plan with tax-deferred growth; often includes employer matching.",
+                        "IRA": "Individual retirement accounts with tax advantages. Traditional (tax-deferred) or Roth (tax-free withdrawals).",
+                        "SEP IRA & Solo 401(k)": "For self-employed individuals."
+                    }
 
-                with st.expander("How to invest?", expanded=False):
+                    for retirement_account, description in retirement_accounts.items():
+                        with st.expander(retirement_account):
+                            st.write(description)
+
+                with st.expander("Investment Strategies, Tips, and Pitfalls", expanded=False):
+                    strategies_tips_pitfalls = {
+                        "Common Investment Strategies": "- Buy and Hold: Purchase investments and hold them over years regardless of short-term market changes. This strategy minimizes transaction costs and capitalizes on long-term growth.\n- Value Investing: Seek undervalued stocks or assets trading below their intrinsic value, aiming for appreciation when the market recognizes their true worth.\n- Growth Investing: Invest in companies with high growth potential, often in emerging industries, expecting rapid earnings expansion.\n- Passive Investing: Track market indices through ETFs or index funds, offering diversification and low fees.\n- Active Investing: Frequent buying and selling based on market analysis, aiming to outperform benchmarks but requiring more effort and expertise. Example: Quantitative Investing.",
+                        "Tips for Successful Investing": "- Stay disciplined: Stick to your plan and avoid impulsive moves.\n- Be patient: Wealth accumulation takes time; avoid get-rich-quick schemes.\n- Keep learning: The investment landscape evolves; continuous education is vital.\n- Seek professional advice: Consider consulting with a financial advisor for personalized guidance.\n- Maintain a balanced lifestyle: Never invest money you cannot afford to lose, and keep a healthy emergency fund.",
+                        "Common Investment Pitfalls to Avoid": "- Timing the Market: Predicting short-term moves is futile; focus on long-term growth.\n- Overtrading: Frequent buying and selling can erode returns through transaction costs and taxes.\n- Ignoring Costs: High fees and expense ratios reduce net gains. Choose low-cost funds and accounts.\n- Neglecting Diversification: Putting all funds into one asset class increases risk.\n- Emotional Investing: Decisions driven by fear or greed often lead to poor outcomes."
+                    }
+
+                    for topic, content in strategies_tips_pitfalls.items():
+                        with st.expander(topic):
+                            st.write(content)
+
+                with st.expander("How to Invest", expanded=False):
                     investment_guide = {
                         "Schwab": "https://www.schwab.com/how-to-invest",
-                        "fidelity": "https://www.fidelity.com/learning-center/trading-investing/investing-for-beginners",
-                        "robinhood": "https://robinhood.com/us/en/learn/investing-101/"
+                        "Fidelity": "https://www.fidelity.com/learning-center/trading-investing/investing-for-beginners",
+                        "Vanguard": "https://investor.vanguard.com",
+                        "Chase": "https://www.chase.com/personal/investments/online-investing",
+                        "Robinhood": "https://robinhood.com/us/en/learn/investing-101/"
                     }
 
                     for company, url in investment_guide.items():
