@@ -177,9 +177,20 @@ def get_ai_response(messages):
         String response from the AI or fallback response on error
     """
     try:
+        settings = {
+            "experience_level": "beginner",
+            "risk_tolerance": st.session_state.risk_scale or None,
+            "investment_amount": st.session_state.investment_amount or None,
+            "current_allocation": normalized_allocations
+        }
+
+        context = {
+            "user_settings": settings,
+            "asset_breakdown": st.session_state.get('asset_breakdown', []) 
+        }
         response = requests.post(
             f"{BACKEND_BASE_URL}/api/v1/llm",
-            json={"messages": messages},
+            json={"messages": messages, "context": context },
             headers={"Content-Type": "application/json"},
             timeout=30
         )
@@ -606,7 +617,7 @@ else:
                     num_items += 1
 
                 breakdown_cols = st.columns(min(num_items, 4))
-
+                result = []
                 for idx, (asset, data) in enumerate(sorted(portfolio_results['breakdown'].items(), key=lambda x: x[1]['current'], reverse=True)):
                     with breakdown_cols[idx % len(breakdown_cols)]:
                         asset_info = data.get('info', {})
@@ -615,7 +626,14 @@ else:
                         st.write(f"Current: ${data['current']:,.0f}")
                         st.write(f"Gain/Loss: ${data['gain_loss']:,.0f}")
                         st.write(f"Return: {data['gain_loss_pct']:.2f}%")
-
+                        result.append({
+                            "asset_name": asset,
+                            "Initial": f"${data['initial']:,.0f}",
+                            "Current": f"Current: ${data['current']:,.0f}",
+                            "Gain/Loss": f"${data['gain_loss']:,.0f}",
+                            "Return": f"{data['gain_loss_pct']:.2f}%"
+                        })
+                st.session_state['asset_breakdown'] = result
                 # Show unallocated cash if any
                 if unallocated_cash > 0:
                     with breakdown_cols[len(portfolio_results['breakdown']) % len(breakdown_cols)]:
@@ -778,7 +796,6 @@ else:
                             st.write(message["content"])
 
                 user_input = st.chat_input("Ask about investing...")
-
                 if user_input:
                     st.session_state.chat_messages.append({
                         "role": "user",

@@ -17,7 +17,9 @@ def chat():
    if not request.json:
        return {"message": "Invalid request: JSON body required"}, 400
    message = request.json.get("messages")[-1]['content']
-   return chat_instance.response(message), 200
+   context = request.json.get("context")
+
+   return chat_instance.response(message, context=context), 200
 
 
 if __name__ == "__main__":
