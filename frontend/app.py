@@ -4,7 +4,7 @@ from supabase import create_client
 import streamlit as st
 import os
 import sys
-import pandas as pd
+from dateutil import tz
 from datetime import datetime, timedelta
 from streamlit_local_storage import LocalStorage
 from questionnaire import show_questionnaire, check_questionnaire_status, reset_questionnaire
@@ -181,13 +181,18 @@ def get_ai_response(messages):
             "experience_level": "beginner",
             "risk_tolerance": st.session_state.risk_scale or None,
             "investment_amount": st.session_state.investment_amount or None,
-            "current_allocation": normalized_allocations
+            "current_allocation": normalized_allocations,
         }
-
         context = {
             "user_settings": settings,
-            "asset_breakdown": st.session_state.get('asset_breakdown', []) 
+            "portfolio_performance": user_portfolio_result,
+            "asset_breakdown": st.session_state.get('asset_breakdown', []),
+            "investment_dates": {
+                "start_date": str(investment_date),
+                "current_date": str(datetime.now(tz=tz.gettz("America/New_York")).strftime("%Y-%m-%d"))
+            }
         }
+        print(context)
         response = requests.post(
             f"{BACKEND_BASE_URL}/api/v1/llm",
             json={"messages": messages, "context": context },
@@ -559,7 +564,7 @@ else:
         # Output Results
         with st.container(border=True):
             st.subheader("📊 Portfolio Performance")
-
+            user_portfolio_result = {}
             if portfolio_results:
                 # Calculate unallocated cash (same as we show in left panel)
                 unallocated_pct = 100 - total_allocation
@@ -605,6 +610,15 @@ else:
                         value=f"${after_tax_value:,.0f}",
                         delta=f"${after_tax_gain:,.0f}"
                     )
+
+                user_portfolio_result = {
+                    "investment_amount": f'{investment_amount:,.0f}',
+                    "current_gain": f'{total_current_with_cash:,.0f}',
+                    "total_current_gain_loss": f'{total_gain_loss:,.0f}',
+                    "total_return_percent": f'{total_gain_loss_pct:.2f}%',
+                    "after_tax_value (15%)": f'{after_tax_value:,.0f}',
+                    "after_tax_gain": f'{after_tax_gain:,.0f}'
+                }
 
                 st.divider()
 
@@ -789,7 +803,7 @@ else:
 
                 st.divider()
 
-                chat_container = st.container(height=300)
+                chat_container = st.container(height=700)
                 with chat_container:
                     for message in st.session_state.chat_messages:
                         with st.chat_message(message["role"]):
