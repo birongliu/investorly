@@ -11,7 +11,7 @@ from questionnaire import show_questionnaire, check_questionnaire_status, reset_
 import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
-from cleanData import load_etf_data, load_crypto_data, load_index_data, calculate_returns, get_performance_metrics, filter_by_date_range
+from get_data import load_etf_data, load_crypto_data, load_index_data, load_fixed_income_data, calculate_returns, get_performance_metrics, filter_by_date_range
 
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
@@ -36,6 +36,11 @@ ASSETS = {
     # Crypto
     'crypto': {
         'BTC': {'name': 'Bitcoin', 'icon': '₿', 'category': 'Cryptocurrency'},
+    },
+    # Fixed Income
+    'fixed_income': {
+        'HY_SAVINGS': {'name': 'High-Yield Savings (Capital One 3.40% APY)', 'icon': '🏦', 'category': 'Fixed Income'},
+        'CD': {'name': 'Certificate of Deposit (Capital One 3.50% APY)', 'icon': '💰', 'category': 'Fixed Income'},
     }
 }
 
@@ -53,7 +58,7 @@ if 'risk_scale' not in st.session_state:
     st.session_state.risk_scale = 5
 
 if 'selected_assets' not in st.session_state:
-    st.session_state.selected_assets = {'VOO': 50, 'BTC': 50}  # Default allocation
+    st.session_state.selected_assets = {'VOO': 40, 'BTC': 40, 'HY_SAVINGS': 10, 'CD': 10}  # Default allocation
 
 if 'last_edited_asset' not in st.session_state:
     st.session_state.last_edited_asset = None
@@ -63,6 +68,16 @@ if 'last_total_allocation' not in st.session_state:
 
 if 'last_risk_scale' not in st.session_state:
     st.session_state.last_risk_scale = 5
+
+# Panel width settings (for resizable layout)
+if 'left_panel_width' not in st.session_state:
+    st.session_state.left_panel_width = 2.2
+
+if 'middle_panel_width' not in st.session_state:
+    st.session_state.middle_panel_width = 3.8
+
+if 'right_panel_width' not in st.session_state:
+    st.session_state.right_panel_width = 2.0
 
 st.set_page_config(
     page_title="Investorly",
@@ -78,6 +93,8 @@ def get_asset_type(ticker):
                 return 'crypto'
             elif category == 'indices':
                 return 'index'
+            elif category == 'fixed_income':
+                return 'fixed_income'
             else:
                 return 'etf'
     return 'etf'
@@ -92,6 +109,8 @@ def load_data_safe(ticker):
             return load_crypto_data(ticker, dataset_dir)
         elif asset_type == 'index':
             return load_index_data(ticker, dataset_dir)
+        elif asset_type == 'fixed_income':
+            return load_fixed_income_data(ticker.lower(), dataset_dir)
         else:
             return load_etf_data(ticker, dataset_dir)
     except Exception as e:
@@ -251,37 +270,37 @@ def get_risk_based_allocation(risk_level):
     Calculate suggested asset allocations based on risk tolerance (1-10 scale).
 
     Risk Level Logic:
-    - 1-3 (Conservative): High VOO, Low BTC, High Cash
-    - 4-6 (Moderate): Balanced VOO/BTC, Some Cash
-    - 7-10 (Aggressive): Low VOO, High BTC, Minimal Cash
+    - 1-3 (Conservative): High Fixed Income, Moderate VOO, Low BTC
+    - 4-6 (Moderate): Balanced with some Fixed Income
+    - 7-10 (Aggressive): Low Fixed Income, Low VOO, High BTC
 
     Returns:
-        dict: {'VOO': %, 'BTC': %, 'cash': %} based on risk level
+        dict: {'VOO': %, 'BTC': %, 'HY_SAVINGS': %, 'CD': %, 'cash': %} based on risk level
     """
     if risk_level <= 2:
-        # Very Conservative: 70% VOO, 10% BTC, 20% Cash
-        return {'VOO': 70, 'BTC': 10, 'cash': 20}
+        # Very Conservative: 40% VOO, 5% BTC, 20% HY Savings, 20% CD, 15% Cash
+        return {'VOO': 40, 'BTC': 5, 'HY_SAVINGS': 20, 'CD': 20, 'cash': 15}
     elif risk_level == 3:
-        # Conservative: 60% VOO, 20% BTC, 20% Cash
-        return {'VOO': 60, 'BTC': 20, 'cash': 20}
+        # Conservative: 45% VOO, 10% BTC, 15% HY Savings, 15% CD, 15% Cash
+        return {'VOO': 45, 'BTC': 10, 'HY_SAVINGS': 15, 'CD': 15, 'cash': 15}
     elif risk_level == 4:
-        # Moderate-Conservative: 50% VOO, 30% BTC, 20% Cash
-        return {'VOO': 50, 'BTC': 30, 'cash': 20}
+        # Moderate-Conservative: 50% VOO, 20% BTC, 10% HY Savings, 10% CD, 10% Cash
+        return {'VOO': 50, 'BTC': 20, 'HY_SAVINGS': 10, 'CD': 10, 'cash': 10}
     elif risk_level == 5:
-        # Moderate: 50% VOO, 40% BTC, 10% Cash
-        return {'VOO': 50, 'BTC': 40, 'cash': 10}
+        # Moderate: 50% VOO, 30% BTC, 5% HY Savings, 5% CD, 10% Cash
+        return {'VOO': 50, 'BTC': 30, 'HY_SAVINGS': 5, 'CD': 5, 'cash': 10}
     elif risk_level == 6:
-        # Moderate-Aggressive: 40% VOO, 50% BTC, 10% Cash
-        return {'VOO': 40, 'BTC': 50, 'cash': 10}
+        # Moderate-Aggressive: 40% VOO, 40% BTC, 5% HY Savings, 5% CD, 10% Cash
+        return {'VOO': 40, 'BTC': 40, 'HY_SAVINGS': 5, 'CD': 5, 'cash': 10}
     elif risk_level == 7:
-        # Aggressive: 30% VOO, 60% BTC, 10% Cash
-        return {'VOO': 30, 'BTC': 60, 'cash': 10}
+        # Aggressive: 30% VOO, 55% BTC, 0% HY Savings, 0% CD, 15% Cash
+        return {'VOO': 30, 'BTC': 55, 'HY_SAVINGS': 0, 'CD': 0, 'cash': 15}
     elif risk_level == 8:
-        # Very Aggressive: 20% VOO, 70% BTC, 10% Cash
-        return {'VOO': 20, 'BTC': 70, 'cash': 10}
+        # Very Aggressive: 20% VOO, 65% BTC, 0% HY Savings, 0% CD, 15% Cash
+        return {'VOO': 20, 'BTC': 65, 'HY_SAVINGS': 0, 'CD': 0, 'cash': 15}
     else:  # 9-10
-        # Extremely Aggressive: 10% VOO, 80% BTC, 10% Cash (min cash for safety)
-        return {'VOO': 10, 'BTC': 80, 'cash': 10}
+        # Extremely Aggressive: 10% VOO, 75% BTC, 0% HY Savings, 0% CD, 15% Cash
+        return {'VOO': 10, 'BTC': 75, 'HY_SAVINGS': 0, 'CD': 0, 'cash': 15}
 
 def get_fallback_response(user_input):
     user_lower = user_input.lower()
@@ -318,7 +337,7 @@ def get_fallback_response(user_input):
 if not check_questionnaire_status():
     show_questionnaire()
 else:
-    # custom CSS 
+    # custom CSS with resizable panels
     st.markdown("""
     <style>
     .stButton button {
@@ -350,8 +369,213 @@ else:
     hr {
         margin: 0.5rem 0;
     }
+
+    /* Make metric labels smaller to prevent overflow */
+    [data-testid="stMetricLabel"] {
+        font-size: 0.85rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Ensure metric values fit */
+    [data-testid="stMetricValue"] {
+        font-size: 1.1rem !important;
+        white-space: nowrap;
+        overflow: visible;
+    }
+
+    /* Resizable columns - add visible resize handles */
+    [data-testid="column"] {
+        position: relative;
+        border-right: 2px solid rgba(128, 128, 128, 0.15);
+    }
+
+    [data-testid="column"]:last-child {
+        border-right: none;
+    }
+
+    /* Create a wider, more visible resize handle */
+    [data-testid="column"]::before {
+        content: '';
+        position: absolute;
+        right: -8px;
+        top: 0;
+        width: 16px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 999;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+    [data-testid="column"]:hover::before {
+        background: rgba(100, 149, 237, 0.2);
+        box-shadow: 0 0 8px rgba(100, 149, 237, 0.3);
+    }
+
+    [data-testid="column"].resizing::before {
+        background: rgba(100, 149, 237, 0.4);
+        box-shadow: 0 0 12px rgba(100, 149, 237, 0.5);
+    }
+
+    /* Add a center line to the resize handle */
+    [data-testid="column"]::after {
+        content: '';
+        position: absolute;
+        right: -1px;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background: rgba(128, 128, 128, 0.15);
+        z-index: 1000;
+        pointer-events: none;
+        transition: all 0.2s ease;
+    }
+
+    [data-testid="column"]:hover::after {
+        background: rgba(100, 149, 237, 0.6);
+        width: 3px;
+        right: -1.5px;
+    }
+
+    [data-testid="column"].resizing::after {
+        background: rgba(100, 149, 237, 0.8);
+        width: 4px;
+        right: -2px;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+    # Add JavaScript for drag-to-resize functionality
+    st.components.v1.html("""
+    <script>
+    (function() {
+        let isResizing = false;
+        let currentColumn = null;
+        let nextColumn = null;
+        let startX = 0;
+        let startWidth = 0;
+        let nextStartWidth = 0;
+
+        function initResizablePanels() {
+            const columns = parent.document.querySelectorAll('[data-testid="column"]');
+
+            if (columns.length === 0) {
+                setTimeout(initResizablePanels, 100);
+                return;
+            }
+
+            console.log('Initializing resizable panels:', columns.length);
+
+            columns.forEach((column, index) => {
+                // Skip the last column
+                if (index === columns.length - 1) return;
+
+                // Ensure column is positioned correctly
+                column.style.position = 'relative';
+
+                // Mouse down on resize handle (right edge area)
+                column.addEventListener('mousedown', function(e) {
+                    const rect = column.getBoundingClientRect();
+                    const handleWidth = 16; // Match CSS ::before width
+
+                    // Check if click is within the resize handle area
+                    if (e.clientX >= rect.right - handleWidth && e.clientX <= rect.right + handleWidth) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        isResizing = true;
+                        currentColumn = column;
+                        nextColumn = columns[index + 1];
+                        startX = e.clientX;
+                        startWidth = column.offsetWidth;
+                        nextStartWidth = nextColumn ? nextColumn.offsetWidth : 0;
+
+                        column.classList.add('resizing');
+                        parent.document.body.style.cursor = 'col-resize';
+                        parent.document.body.style.userSelect = 'none';
+
+                        console.log('Started resizing', index);
+                    }
+                });
+
+                // Show cursor change on hover
+                column.addEventListener('mousemove', function(e) {
+                    if (isResizing) return;
+
+                    const rect = column.getBoundingClientRect();
+                    const handleWidth = 16;
+
+                    if (e.clientX >= rect.right - handleWidth && e.clientX <= rect.right + handleWidth) {
+                        column.style.cursor = 'col-resize';
+                    } else {
+                        column.style.cursor = 'default';
+                    }
+                });
+            });
+
+            // Global mouse move handler
+            parent.document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+
+                e.preventDefault();
+                const delta = e.clientX - startX;
+                const newWidth = startWidth + delta;
+                const minWidth = 250; // minimum panel width
+
+                if (newWidth >= minWidth && nextColumn) {
+                    const nextNewWidth = nextStartWidth - delta;
+
+                    if (nextNewWidth >= minWidth) {
+                        currentColumn.style.flex = '0 0 auto';
+                        currentColumn.style.width = newWidth + 'px';
+                        nextColumn.style.flex = '0 0 auto';
+                        nextColumn.style.width = nextNewWidth + 'px';
+                    }
+                }
+            });
+
+            // Global mouse up handler
+            parent.document.addEventListener('mouseup', function() {
+                if (isResizing) {
+                    isResizing = false;
+                    if (currentColumn) {
+                        currentColumn.classList.remove('resizing');
+                    }
+                    parent.document.body.style.cursor = 'default';
+                    parent.document.body.style.userSelect = 'auto';
+
+                    console.log('Stopped resizing');
+                    currentColumn = null;
+                    nextColumn = null;
+                }
+            });
+
+            console.log('Resizable panels initialized successfully');
+        }
+
+        // Initialize when ready
+        if (parent.document.readyState === 'loading') {
+            parent.document.addEventListener('DOMContentLoaded', initResizablePanels);
+        } else {
+            setTimeout(initResizablePanels, 500); // Wait for Streamlit to fully render
+        }
+
+        // Re-initialize on Streamlit rerun
+        const observer = new MutationObserver(function() {
+            initResizablePanels();
+        });
+
+        setTimeout(function() {
+            const targetNode = parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            if (targetNode) {
+                observer.observe(targetNode, { childList: true, subtree: true });
+            }
+        }, 1000);
+    })();
+    </script>
+    """, height=0)
 
     # sign up/log in buttons
     header_cols = st.columns([4, 1, 1])
@@ -365,9 +589,17 @@ else:
 
     # main layout: Left selector | Middle dashboard | Right panel
     if st.session_state.right_panel_visible:
-        left_col, middle_col, right_col = st.columns([2.2, 3.8, 2])
+        left_col, middle_col, right_col = st.columns([
+            st.session_state.left_panel_width,
+            st.session_state.middle_panel_width,
+            st.session_state.right_panel_width
+        ])
     else:
-        left_col, middle_col, right_col = st.columns([2.2, 5.8, 0.1])
+        left_col, middle_col, right_col = st.columns([
+            st.session_state.left_panel_width,
+            st.session_state.middle_panel_width + st.session_state.right_panel_width,
+            0.1
+        ])
     # LEFT PANEL -> Investment Settings & Asset Allocation
     with left_col:
         with st.container(border=True):
@@ -415,8 +647,10 @@ else:
                 st.session_state.last_risk_scale = risk_scale
                 # Auto-apply the risk-based allocation
                 risk_alloc = get_risk_based_allocation(risk_scale)
-                st.session_state.selected_assets['VOO'] = risk_alloc['VOO']
-                st.session_state.selected_assets['BTC'] = risk_alloc['BTC']
+                st.session_state.selected_assets['VOO'] = risk_alloc.get('VOO', 0)
+                st.session_state.selected_assets['BTC'] = risk_alloc.get('BTC', 0)
+                st.session_state.selected_assets['HY_SAVINGS'] = risk_alloc.get('HY_SAVINGS', 0)
+                st.session_state.selected_assets['CD'] = risk_alloc.get('CD', 0)
                 # Force rerun to update all dependent values
                 st.rerun()
 
@@ -491,19 +725,28 @@ else:
             # update the Current Allocation display with actual slider values
             current_voo = allocations.get('VOO', 0)
             current_btc = allocations.get('BTC', 0)
+            current_hy_savings = allocations.get('HY_SAVINGS', 0)
+            current_cd = allocations.get('CD', 0)
             current_cash = 100 - total_allocation
 
             with allocation_display_placeholder.container():
                 with st.expander(f"📊 Current Allocation (Auto-adjusted by Risk Level)", expanded=True):
                     st.markdown("**Your allocations automatically adjust based on your risk tolerance:**")
-                    alloc_display_cols = st.columns(3)
 
-                    with alloc_display_cols[0]:
-                        st.metric("VOO", f"{current_voo}%")
-                    with alloc_display_cols[1]:
-                        st.metric("BTC", f"{current_btc}%")
-                    with alloc_display_cols[2]:
-                        st.metric("Cash", f"{current_cash}%")
+                    # Display allocation in a table format to prevent truncation
+                    alloc_data = {
+                        "Asset": ["VOO", "BTC", "HY Savings", "CD", "Cash"],
+                        "Allocation": [f"{current_voo}%", f"{current_btc}%", f"{current_hy_savings}%", f"{current_cd}%", f"{current_cash}%"]
+                    }
+
+                    # Use columns with better spacing
+                    for i in range(0, 5, 5):
+                        cols = st.columns(5)
+                        for j, col in enumerate(cols):
+                            if i + j < 5:
+                                with col:
+                                    st.markdown(f"**{alloc_data['Asset'][i+j]}**")
+                                    st.markdown(f"<div style='font-size: 1.2rem; font-weight: 600;'>{alloc_data['Allocation'][i+j]}</div>", unsafe_allow_html=True)
 
                     st.caption("💡 Adjust sliders below to update allocations")
 

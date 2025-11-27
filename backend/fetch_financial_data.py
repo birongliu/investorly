@@ -10,10 +10,110 @@ import yfinance as yf
 import pandas as pd
 import os
 import sys
+from datetime import datetime, timedelta
+import numpy as np
 
 # Create dataset directory if it doesn't exist
 DATASET_DIR = "./dataset"
 os.makedirs(DATASET_DIR, exist_ok=True)
+
+def generate_savings_data(apy: float, name: str, filename: str, years: int = 10):
+    """
+    Generate simulated savings account data with compound interest.
+
+    Args:
+        apy: Annual Percentage Yield (e.g., 0.034 for 3.4%)
+        name: Name of the savings product (e.g., 'High Yield Savings')
+        filename: Output CSV filename
+        years: Number of years of historical data to generate (default 10)
+    """
+    try:
+        # Calculate the date range
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=365 * years)
+
+        # Generate daily dates
+        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+
+        # For savings, the "price" is the account value growth
+        # Daily compounding: daily_rate = (1 + APY)^(1/365)
+        daily_rate = (1 + apy) ** (1/365)
+
+        # Start with $100 (base unit price)
+        prices = []
+        for i in range(len(dates)):
+            price = 100 * (daily_rate ** i)
+            prices.append(price)
+
+        # Create DataFrame
+        data = pd.DataFrame({
+            'Date': dates,
+            'Open': prices,
+            'High': prices,
+            'Low': prices,
+            'Close': prices,
+            'Adj Close': prices,
+            'Volume': [0] * len(dates),  # No volume for savings
+            'Ticker': name
+        })
+
+        # Reorder columns
+        data = data[['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume', 'Ticker', 'Date']]
+
+        # Save to CSV
+        filepath = os.path.join(DATASET_DIR, filename)
+        data.to_csv(filepath, index=False)
+
+        print(f"  Generated {len(data)} records for {name} ({apy*100:.2f}% APY)")
+        print(f"  Saved to {filepath}")
+        return True
+
+    except Exception as e:
+        print(f"  Error generating {name}: {str(e)}")
+        return False
+
+
+def generate_savings_accounts():
+    """
+    Generate historical data for HY Savings and CD (Capital One rates).
+    Capital One rates: HY 3.40% APY, CD 3.50% APY
+    """
+    print("\n" + "="*80)
+    print("INVESTORLY - Generating Savings Account Data")
+    print("="*80 + "\n")
+
+    savings_products = [
+        (0.034, 'High Yield Savings', 'savings_hy.csv'),
+        (0.035, 'Certificate of Deposit', 'savings_cd.csv'),
+    ]
+
+    print("Savings products to generate:\n")
+    for apy, name, _ in savings_products:
+        print(f"  - {name}: {apy*100:.2f}% APY")
+
+    print("\n" + "="*80)
+    response = input("\nGenerate savings data? (y/n): ").strip().lower()
+
+    if response != 'y':
+        print("Cancelled by user.")
+        return
+
+    print("\nGenerating data...\n")
+
+    successful = 0
+    total = len(savings_products)
+
+    for apy, name, filename in savings_products:
+        print(f"Generating {name}...")
+        if generate_savings_data(apy, name, filename):
+            successful += 1
+        print()
+
+    print("="*80)
+    print("GENERATION SUMMARY")
+    print("="*80)
+    print(f"\nSuccessfully generated: {successful}/{total}\n")
+    print("="*80 + "\n")
 
 
 def fetch_and_save_ticker(ticker: str, period: str = "10y", filename: str = None):
