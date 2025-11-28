@@ -44,6 +44,8 @@ docker compose build
 docker compose up
 ```
 
+Visit the project at http://localhost:8031
+
 ```bash
 # Run containers in the background
 docker compose up -d
@@ -82,3 +84,5 @@ python ./backend/app.py
 ```bash
 streamlit run ./frontend/app.py
 ```
+
+Visit the project at http://localhost:8501
