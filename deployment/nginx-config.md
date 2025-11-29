@@ -20,14 +20,24 @@ server {
     # Define the domain name(s).
     server_name investorly.qingquanli.com;
 
-    # Define the location for the root URL (frontend).
+    # Define the location for the root URL.
     location / {
-        # 8031 is the frontend port defined in the docker-compose.yml file.
-        proxy_pass http://localhost:8031;
+        # 8030 is the frontend service port defined in the docker-compose.yml file.
+        proxy_pass http://localhost:8030;
+
+        # WebSocket support (critical for Streamlit)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Standard headers
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Optional: avoid timeouts on long WS connections
+        proxy_read_timeout 86400;
 }
 ```
 
