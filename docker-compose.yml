@@ -7,9 +7,11 @@ services:
     working_dir: /app/backend
     command: >
       gunicorn --bind 0.0.0.0:5000 app:app
-    ports:
-      - "8030:5000"
-    # dev mode with live code changes
+    # Don't need to expose port to host
+    # frontend service talks to backend service via docker internal network
+    # ports:
+    #   - "5000:5000"
+    # Dev mode with live code changes. Uncomment below if needed
     # volumes:
     #   - .:/app
     restart: unless-stopped
@@ -25,12 +27,12 @@ services:
       --server.port=8501
       --server.address=0.0.0.0
     environment:
-      BACKEND_BASE_URL: http://backend:8030
+      BACKEND_BASE_URL: http://backend:5000
     depends_on:
       - backend
     ports:
-      - "8031:8501"
-    # dev mode with live code changes
+      - "8030:8501"
+    # Dev mode with live code changes. Uncomment below if needed
     # volumes:
     #   - .:/app
     restart: unless-stopped
