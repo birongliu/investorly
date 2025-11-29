@@ -7,3 +7,6 @@ streamlit==1.51.0
 streamlit_supabase_auth
 streamlit-local-storage
 yfinance>=0.2.40
+flask-cors==6.0.1
+huggingface_hub==1.1.2
+requests

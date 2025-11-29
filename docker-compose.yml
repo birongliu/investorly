@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: investorly-backend
+    working_dir: /app/backend
+    command: >
+      gunicorn --bind 0.0.0.0:5000 app:app
+    ports:
+      - "8030:5000"
+    # dev mode with live code changes
+    # volumes:
+    #   - .:/app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: investorly-frontend
+    working_dir: /app/frontend
+    command: >
+      streamlit run app.py
+      --server.port=8501
+      --server.address=0.0.0.0
+    environment:
+      BACKEND_BASE_URL: http://backend:8030
+    depends_on:
+      - backend
+    ports:
+      - "8031:8501"
+    # dev mode with live code changes
+    # volumes:
+    #   - .:/app
+    restart: unless-stopped
