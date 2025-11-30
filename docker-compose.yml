@@ -31,7 +31,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "8030:8501"
+      - "8501:8501"
     # Dev mode with live code changes. Uncomment below if needed
     # volumes:
     #   - .:/app
