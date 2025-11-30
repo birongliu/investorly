@@ -2,7 +2,7 @@
 
 Investorly — An investment portfolio dashboard for beginners to learn investing.
 
-![Investorly Dashboard](https://github.com/user-attachments/assets/fac1c10b-511b-43a0-8e44-1af07b427b15)
+![Investorly Dashboard](https://github.com/user-attachments/assets/b34332ef-55ef-4a07-8394-75f3d33da61a)
 
 ## Tech Stack
 
@@ -44,7 +44,7 @@ docker compose build
 docker compose up
 ```
 
-Visit the project at http://localhost:8031
+Visit the project at http://localhost:8030
 
 ```bash
 # Run containers in the background
@@ -85,4 +85,4 @@ python ./backend/app.py
 streamlit run ./frontend/app.py
 ```
 
-Visit the project at http://localhost:8501
+Visit the project at http://localhost:8030
