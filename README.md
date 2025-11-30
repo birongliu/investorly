@@ -44,7 +44,7 @@ docker compose build
 docker compose up
 ```
 
-Visit the project at http://localhost:8031
+Visit the project at http://localhost:8030
 
 ```bash
 # Run containers in the background
