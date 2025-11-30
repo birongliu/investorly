@@ -85,4 +85,4 @@ python ./backend/app.py
 streamlit run ./frontend/app.py
 ```
 
-Visit the project at http://localhost:8501
+Visit the project at http://localhost:8030

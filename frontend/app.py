@@ -305,24 +305,80 @@ def get_all_tickers():
         tickers.extend(list(assets.keys()))
     return sorted(tickers)
 
-def get_ai_response(messages):
+def get_ai_response(messages, portfolio_results, investment_date, normalized_allocations):
     """
     Call the Flask backend to get AI chatbot response
     
     Args:
         messages: List of message dictionaries with 'role' and 'content' keys
+        portfolio_results: Portfolio performance data
+        investment_date: Date of investment
+        normalized_allocations: Current asset allocations
     
     Returns:
         String response from the AI or fallback response on error
     """
     try:
+        # Prepare settings data
+        settings = {
+            "experience_level": "beginner",
+            "risk_tolerance": st.session_state.risk_scale,
+            "investment_amount": st.session_state.investment_amount,
+            "current_allocation": normalized_allocations,
+        }
+
+        # Prepare portfolio performance data
+        portfolio_performance = None
+        if portfolio_results:
+            unallocated_pct = 100 - sum(normalized_allocations.values())
+            unallocated_cash = (unallocated_pct / 100) * st.session_state.investment_amount
+            total_current_with_cash = portfolio_results['total_current'] + unallocated_cash
+            total_gain_loss = total_current_with_cash - st.session_state.investment_amount
+            total_gain_loss_pct = (total_gain_loss / st.session_state.investment_amount) * 100 if st.session_state.investment_amount > 0 else 0
+            
+            portfolio_performance = {
+                "initial_investment": st.session_state.investment_amount,
+                "current_value": total_current_with_cash,
+                "total_gain_loss": total_gain_loss,
+                "total_gain_loss_pct": total_gain_loss_pct,
+                "unallocated_cash": unallocated_cash
+            }
+
+        # Prepare asset breakdown data
+        asset_breakdown = []
+        if portfolio_results:
+            for asset, data in portfolio_results['breakdown'].items():
+                asset_info = data.get('info', {})
+                asset_breakdown.append({
+                    "ticker": asset,
+                    "name": asset_info.get('name', asset),
+                    "category": asset_info.get('category', 'Unknown'),
+                    "initial_investment": data['initial'],
+                    "current_value": data['current'],
+                    "gain_loss": data['gain_loss'],
+                    "gain_loss_pct": data['gain_loss_pct'],
+                    "volatility": data['volatility'],
+                    "current_price": data['current_price']
+                })
+
+        # Prepare complete context
+        context = {
+            "user_settings": settings,
+            "portfolio_performance": portfolio_performance,
+            "asset_breakdown": asset_breakdown,
+            "investment_dates": {
+                "start_date": str(investment_date),
+                "current_date": datetime.now().strftime("%Y-%m-%d")
+            }
+        }
+        
         response = requests.post(
             f"{BACKEND_BASE_URL}/api/v1/llm",
-            json={"messages": messages},
+            json={"messages": messages, "context": context},
             headers={"Content-Type": "application/json"},
             timeout=30
         )
-        st.write(response)
+        
         if response.status_code == 200:
             data = response.json()
             messageAI = data.get("response", "I'm having trouble responding right now.")
@@ -882,8 +938,13 @@ with right_col:
 
                 # Show loading spinner while getting AI response
                 with st.spinner("🤔 Thinking..."):
-                    # Get AI response from backend
-                    ai_response = get_ai_response(st.session_state.chat_messages)
+                    # Get AI response from backend with full context
+                    ai_response = get_ai_response(
+                        st.session_state.chat_messages,
+                        portfolio_results,
+                        investment_date,
+                        normalized_allocations
+                    )
 
                 # Add AI response to chat history
                 st.session_state.chat_messages.append({
