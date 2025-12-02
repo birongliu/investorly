@@ -3,17 +3,21 @@ import os
 
 
 def load_etf_data(ticker: str, dataset_dir: str = "./dataset") -> pd.DataFrame:
-    filename = f"df_{ticker.lower()}.csv"
-    filepath = os.path.join(dataset_dir, filename)
-    
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Data file not found: {filepath}")
-    
-    df = pd.read_csv(filepath)
-    df['Date'] = pd.to_datetime(df['Date'])
-    df = df.sort_values('Date')
-    
-    return df
+    """Load ETF data - tries multiple filename patterns for compatibility"""
+    patterns = [
+        f"{ticker.lower()}.csv",      # New pattern: spy.csv, qqq.csv
+        f"df_{ticker.lower()}.csv",   # Legacy pattern: df_voo.csv
+    ]
+
+    for filename in patterns:
+        filepath = os.path.join(dataset_dir, filename)
+        if os.path.exists(filepath):
+            df = pd.read_csv(filepath)
+            df['Date'] = pd.to_datetime(df['Date'])
+            df = df.sort_values('Date')
+            return df
+
+    raise FileNotFoundError(f"Data file not found for {ticker}. Tried: {patterns}")
 
 
 def load_index_data(index_symbol: str, dataset_dir: str = "./dataset") -> pd.DataFrame:
@@ -31,6 +35,7 @@ def load_index_data(index_symbol: str, dataset_dir: str = "./dataset") -> pd.Dat
 
 
 def load_crypto_data(crypto_symbol: str, dataset_dir: str = "./dataset") -> pd.DataFrame:
+    """Load crypto data - supports symbols like BTC, ETH, SOL, etc."""
     filename = f"crypto_{crypto_symbol.lower()}.csv"
     filepath = os.path.join(dataset_dir, filename)
 
