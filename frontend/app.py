@@ -7,6 +7,7 @@ import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from get_data import load_etf_data, load_crypto_data, load_index_data, load_fixed_income_data, calculate_returns, get_performance_metrics, filter_by_date_range
+from generate_fixed_income_data import generate_daily_compound_data
 
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:5000")
 
@@ -234,6 +235,12 @@ if 'last_total_allocation' not in st.session_state:
 if 'last_risk_scale' not in st.session_state:
     st.session_state.last_risk_scale = 5
 
+if 'hy_savings_rate' not in st.session_state:
+    st.session_state.hy_savings_rate = 3.40  # Default HY Savings APY
+
+if 'cd_rate' not in st.session_state:
+    st.session_state.cd_rate = 3.50  # Default CD APY
+
 def get_asset_type(ticker):
     for category, assets in ASSETS.items():
         if ticker in assets:
@@ -257,7 +264,26 @@ def load_data_safe(ticker):
         elif asset_type == 'index':
             return load_index_data(ticker, dataset_dir)
         elif asset_type == 'fixed_income':
-            return load_fixed_income_data(ticker.lower(), dataset_dir)
+            # Generate data dynamically based on custom rates
+            if ticker == 'HY_SAVINGS':
+                rate = st.session_state.get('hy_savings_rate', 3.40)
+            elif ticker == 'CD':
+                rate = st.session_state.get('cd_rate', 3.50)
+            else:
+                return load_fixed_income_data(ticker.lower(), dataset_dir)
+
+            # Generate data from 2015-11-25 to today
+            start_date = datetime(2015, 11, 25)
+            end_date = datetime.now()
+
+            # Generate dynamic data with custom rate
+            df = generate_daily_compound_data(
+                start_date=start_date,
+                end_date=end_date,
+                apy=rate,  
+                initial_value=10000
+            )
+            return df
         else:
             return load_etf_data(ticker, dataset_dir)
     except Exception as e:
@@ -626,11 +652,13 @@ with left_col:
 
         st.divider()
 
-        st.write("**🎯 Select Assets**")
-        st.caption("Choose which assets to include in your portfolio")
+        # Combined Asset Selection & Fixed Income Rates Section
+        with st.expander("**🎯 Select Assets & Customize Rates**", expanded=False):
+            st.caption("Choose which assets to include in your portfolio and set custom rates for fixed income products")
 
-        for category_name, category_assets in ASSETS.items():
-            with st.expander(f"{category_name.replace('_', ' ').title()} ({len(category_assets)} assets)", expanded=False):
+            # Asset Selection
+            for category_name, category_assets in ASSETS.items():
+                st.write(f"**{category_name.replace('_', ' ').title()}** ({len(category_assets)} assets)")
                 cols = st.columns(2)
                 for idx, (ticker, asset_info) in enumerate(category_assets.items()):
                     with cols[idx % 2]:
@@ -649,6 +677,45 @@ with left_col:
                             st.session_state.enabled_assets.remove(ticker)
                             if ticker in st.session_state.selected_assets:
                                 st.session_state.selected_assets[ticker] = 0
+
+                if category_name != list(ASSETS.keys())[-1]:
+                    st.write("")
+
+            # Fixed Income Rate Inputs (only show if fixed income assets are enabled)
+            if 'HY_SAVINGS' in st.session_state.enabled_assets or 'CD' in st.session_state.enabled_assets:
+                st.divider()
+                st.write("**💰 Fixed Income Rates**")
+                st.caption("Customize APY rates for your fixed income products")
+
+                rate_cols = st.columns(2)
+
+                if 'HY_SAVINGS' in st.session_state.enabled_assets:
+                    with rate_cols[0]:
+                        hy_rate = st.number_input(
+                            "🏦 HY Savings APY (%)",
+                            min_value=0.0,
+                            max_value=10.0,
+                            value=st.session_state.hy_savings_rate,
+                            step=0.01,
+                            format="%.2f",
+                            key="hy_savings_rate_input",
+                            help="Enter the annual percentage yield for your high-yield savings account"
+                        )
+                        st.session_state.hy_savings_rate = hy_rate
+
+                if 'CD' in st.session_state.enabled_assets:
+                    with rate_cols[1]:
+                        cd_rate = st.number_input(
+                            "💰 CD APY (%)",
+                            min_value=0.0,
+                            max_value=10.0,
+                            value=st.session_state.cd_rate,
+                            step=0.01,
+                            format="%.2f",
+                            key="cd_rate_input",
+                            help="Enter the annual percentage yield for your certificate of deposit"
+                        )
+                        st.session_state.cd_rate = cd_rate
 
         st.divider()
 
@@ -696,7 +763,16 @@ with left_col:
                     col1, col2 = st.columns([2.5, 1])
 
                     with col1:
-                        st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_info['name']}</span></div>", unsafe_allow_html=True)
+                        # Display custom rate for fixed income products
+                        asset_name = asset_info['name']
+                        if ticker == 'HY_SAVINGS':
+                            custom_rate = st.session_state.get('hy_savings_rate', 3.40)
+                            asset_name = f"High-Yield Savings ({custom_rate:.2f}% APY)"
+                        elif ticker == 'CD':
+                            custom_rate = st.session_state.get('cd_rate', 3.50)
+                            asset_name = f"Certificate of Deposit ({custom_rate:.2f}% APY)"
+
+                        st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_name}</span></div>", unsafe_allow_html=True)
 
                     with col2:
                         risk_based_pct = suggested_alloc.get(ticker, 0)
