@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 # Create dataset directory if it doesn't exist
-DATASET_DIR = "/dataset"
+DATASET_DIR = "./dataset"
 os.makedirs(DATASET_DIR, exist_ok=True)
 
 def generate_savings_data(apy: float, name: str, filename: str, years: int = 10):
