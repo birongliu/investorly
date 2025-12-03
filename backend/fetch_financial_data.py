@@ -116,19 +116,23 @@ def generate_savings_accounts():
     print("="*80 + "\n")
 
 
-def fetch_and_save_ticker(ticker: str, period: str = "10y", filename: str = None):
+def fetch_and_save_ticker(ticker: str, period: str = "10y", filename: str = None, start_date: str = None):
     """
     Fetch historical data for a single ticker and save to CSV.
-    
+
     Args:
         ticker: Stock/ETF ticker symbol (e.g., 'VOO', 'SPY')
         period: Time period to fetch (e.g., '1y', '5y', '10y', 'max')
         filename: Custom filename (optional, defaults to ticker name)
+        start_date: Specific start date (e.g., '2015-11-25') - overrides period
     """
     try:
         print(f"Fetching data for {ticker}...")
 
-        data = yf.download(ticker, period=period, progress=False, auto_adjust=False)
+        if start_date:
+            data = yf.download(ticker, start=start_date, progress=False, auto_adjust=False)
+        else:
+            data = yf.download(ticker, period=period, progress=False, auto_adjust=False)
 
         if data.empty:
             print(f"  No data found for {ticker}")
@@ -264,19 +268,29 @@ def main():
                 period_idx = sys.argv.index('--period')
                 period = sys.argv[period_idx + 1]
 
+            start_date = None
+            if '--start' in sys.argv:
+                start_idx = sys.argv.index('--start')
+                start_date = sys.argv[start_idx + 1]
+
             filename = None
             if '-USD' in ticker:
                 crypto_symbol = ticker.replace('-USD', '').lower()
                 filename = f"crypto_{crypto_symbol}.csv"
 
-            print(f"\nFetching {ticker} ({period} period)...\n")
-            if fetch_and_save_ticker(ticker, period=period, filename=filename):
+            if start_date:
+                print(f"\nFetching {ticker} (from {start_date})...\n")
+            else:
+                print(f"\nFetching {ticker} ({period} period)...\n")
+
+            if fetch_and_save_ticker(ticker, period=period, filename=filename, start_date=start_date):
                 print(f"\nSuccessfully fetched {ticker}")
             else:
                 print(f"\nFailed to fetch {ticker}")
         except (IndexError, ValueError):
             print("Error: Please provide a ticker symbol after --single")
             print("Example: python fetch_financial_data.py --single VOO")
+            print("Example: python fetch_financial_data.py --single VOO --start 2015-11-25")
 
     else:
         print("Unknown command. Use --help for usage information.")

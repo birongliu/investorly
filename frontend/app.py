@@ -7,10 +7,10 @@ import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from get_data import load_etf_data, load_crypto_data, load_index_data, load_fixed_income_data, calculate_returns, get_performance_metrics, filter_by_date_range
+from generate_fixed_income_data import generate_daily_compound_data
 
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://localhost:5000")
 
-# Page configuration
 st.set_page_config(
     page_title="Investorly",
     page_icon="📈",
@@ -18,14 +18,19 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# custom CSS with resizable panels
 st.markdown("""
 <style>
+.stMainBlockContainer {
+    padding-top: 0rem !important;
+}
+div[data-testid="stMainBlockContainer"] {
+    padding-top: 0rem !important;
+}
 .stButton button {
     width: 100%;
 }
 .main {
-    padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+    padding: 0rem 0.5rem 0.5rem 0.5rem;
     max-width: 100%;
 }
 [data-testid="stVerticalBlock"] {
@@ -36,22 +41,46 @@ st.markdown("""
     border-radius: 0.5rem;
     margin-bottom: 0.5rem;
 }
-/* Reduce header padding */
 .stMarkdownContainer {
     padding: 0 !important;
 }
-/* Reduce container padding */
 [data-testid="stAppViewContainer"] {
-    padding-top: 0.1rem;
+    padding-top: 0rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
 }
-/* Reduce divider spacing */
+header[data-testid="stHeader"] {
+    padding-top: 0rem !important;
+    margin-top: 0rem !important;
+}
+.main .block-container {
+    padding-top: 0rem !important;
+    padding-bottom: 1rem !important;
+    margin-top: 0rem !important;
+}
+section.main > div {
+    padding-top: 0rem !important;
+}
+section.main > div:first-child {
+    padding-top: 0rem !important;
+    margin-top: 0rem !important;
+}
+.stApp {
+    padding-top: 0rem !important;
+    margin-top: 0rem !important;
+}
+.st-emotion-cache-zyqvyx, .st-emotion-cache-z5fcl4 {
+    padding-top: 0rem !important;
+}
+[data-testid="stAppViewContainer"] > section {
+    padding-top: 0rem !important;
+}
+section[tabindex="0"] {
+    padding-top: 0rem !important;
+}
 hr {
     margin: 0.5rem 0;
 }
-
-/* Make metric labels smaller to prevent overflow */
 [data-testid="stMetricLabel"] {
     font-size: 0.85rem !important;
     white-space: nowrap;
@@ -59,14 +88,12 @@ hr {
     text-overflow: ellipsis;
 }
 
-/* Ensure metric values fit */
 [data-testid="stMetricValue"] {
     font-size: 1.1rem !important;
     white-space: nowrap;
     overflow: visible;
 }
 
-/* Resizable columns - add visible resize handles */
 [data-testid="column"] {
     position: relative;
     border-right: 2px solid rgba(128, 128, 128, 0.15);
@@ -76,7 +103,6 @@ hr {
     border-right: none;
 }
 
-/* Create a wider, more visible resize handle */
 [data-testid="column"]::before {
     content: '';
     position: absolute;
@@ -100,7 +126,6 @@ hr {
     box-shadow: 0 0 12px rgba(100, 149, 237, 0.5);
 }
 
-/* Add a center line to the resize handle */
 [data-testid="column"]::after {
     content: '';
     position: absolute;
@@ -155,22 +180,34 @@ investment_map = {
 }
 
 ASSETS = {
-    # Stock ETFs
     'stock': {
-        'VOO': {'name': 'Vanguard S&P 500 ETF', 'icon': '🏛️', 'category': 'Stock'},
+        'SPY': {'name': 'SPDR S&P 500 ETF Trust', 'icon': '🕷️', 'category': 'Stock', 'ticker_yf': 'SPY'},
+        'VOO': {'name': 'Vanguard S&P 500 ETF', 'icon': '🏛️', 'category': 'Stock', 'ticker_yf': 'VOO'},
+        'QQQ': {'name': 'Invesco QQQ (Nasdaq-100)', 'icon': '🚀', 'category': 'Stock', 'ticker_yf': 'QQQ'},
+        'VTI': {'name': 'Vanguard Total Stock Market ETF', 'icon': '📊', 'category': 'Stock', 'ticker_yf': 'VTI'},
+        'IVV': {'name': 'iShares Core S&P 500 ETF', 'icon': '🏢', 'category': 'Stock', 'ticker_yf': 'IVV'},
+        'SCHD': {'name': 'Schwab US Dividend Equity ETF', 'icon': '💵', 'category': 'Stock', 'ticker_yf': 'SCHD'},
+        'VUG': {'name': 'Vanguard Growth ETF', 'icon': '📈', 'category': 'Stock', 'ticker_yf': 'VUG'},
+        'IWM': {'name': 'iShares Russell 2000 ETF', 'icon': '🏭', 'category': 'Stock', 'ticker_yf': 'IWM'},
+        'VEA': {'name': 'Vanguard FTSE Developed Markets ETF', 'icon': '🌍', 'category': 'Stock', 'ticker_yf': 'VEA'},
+        'AGG': {'name': 'iShares Core US Aggregate Bond ETF', 'icon': '📜', 'category': 'Stock', 'ticker_yf': 'AGG'},
     },
-    # Crypto
     'crypto': {
-        'BTC': {'name': 'Bitcoin', 'icon': '₿', 'category': 'Cryptocurrency'},
+        'BTC': {'name': 'Bitcoin', 'icon': '₿', 'category': 'Cryptocurrency', 'ticker_yf': 'BTC-USD'},
+        'ETH': {'name': 'Ethereum', 'icon': '⟠', 'category': 'Cryptocurrency', 'ticker_yf': 'ETH-USD'},
+        'BNB': {'name': 'Binance Coin', 'icon': '🔶', 'category': 'Cryptocurrency', 'ticker_yf': 'BNB-USD'},
+        'SOL': {'name': 'Solana', 'icon': '◎', 'category': 'Cryptocurrency', 'ticker_yf': 'SOL-USD'},
+        'XRP': {'name': 'Ripple', 'icon': '💧', 'category': 'Cryptocurrency', 'ticker_yf': 'XRP-USD'},
+        'ADA': {'name': 'Cardano', 'icon': '₳', 'category': 'Cryptocurrency', 'ticker_yf': 'ADA-USD'},
+        'DOGE': {'name': 'Dogecoin', 'icon': '🐕', 'category': 'Cryptocurrency', 'ticker_yf': 'DOGE-USD'},
+        'AVAX': {'name': 'Avalanche', 'icon': '🔺', 'category': 'Cryptocurrency', 'ticker_yf': 'AVAX-USD'},
     },
-    # Fixed Income
     'fixed_income': {
-        'HY_SAVINGS': {'name': 'High-Yield Savings (Capital One 3.40% APY)', 'icon': '🏦', 'category': 'Fixed Income'},
-        'CD': {'name': 'Certificate of Deposit (Capital One 3.50% APY)', 'icon': '💰', 'category': 'Fixed Income'},
+        'HY_SAVINGS': {'name': 'High-Yield Savings (Capital One 3.40% APY)', 'icon': '🏦', 'category': 'Fixed Income', 'ticker_yf': None},
+        'CD': {'name': 'Certificate of Deposit (Capital One 3.50% APY)', 'icon': '💰', 'category': 'Fixed Income', 'ticker_yf': None},
     }
 }
 
-# Initialize session state
 if 'right_panel_visible' not in st.session_state:
     st.session_state.right_panel_visible = True
 
@@ -186,6 +223,9 @@ if 'risk_scale' not in st.session_state:
 if 'selected_assets' not in st.session_state:
     st.session_state.selected_assets = {'VOO': 40, 'BTC': 40, 'HY_SAVINGS': 10, 'CD': 10}  # Default allocation
 
+if 'enabled_assets' not in st.session_state:
+    st.session_state.enabled_assets = ['VOO', 'BTC', 'HY_SAVINGS', 'CD']
+
 if 'last_edited_asset' not in st.session_state:
     st.session_state.last_edited_asset = None
 
@@ -195,16 +235,11 @@ if 'last_total_allocation' not in st.session_state:
 if 'last_risk_scale' not in st.session_state:
     st.session_state.last_risk_scale = 5
 
-# Panel width settings (for resizable layout)
-if 'left_panel_width' not in st.session_state:
-    st.session_state.left_panel_width = 2.2
+if 'hy_savings_rate' not in st.session_state:
+    st.session_state.hy_savings_rate = 3.40  # Default HY Savings APY
 
-if 'middle_panel_width' not in st.session_state:
-    st.session_state.middle_panel_width = 3.8
-
-if 'right_panel_width' not in st.session_state:
-    st.session_state.right_panel_width = 2.0
-
+if 'cd_rate' not in st.session_state:
+    st.session_state.cd_rate = 3.50  # Default CD APY
 
 def get_asset_type(ticker):
     for category, assets in ASSETS.items():
@@ -220,7 +255,6 @@ def get_asset_type(ticker):
     return 'etf'
 
 def load_data_safe(ticker):
-    """Safely load data with caching - auto-detects asset type"""
     try:
         dataset_dir = os.path.join(os.path.dirname(__file__), '..', 'backend', 'dataset')
         asset_type = get_asset_type(ticker)
@@ -230,14 +264,32 @@ def load_data_safe(ticker):
         elif asset_type == 'index':
             return load_index_data(ticker, dataset_dir)
         elif asset_type == 'fixed_income':
-            return load_fixed_income_data(ticker.lower(), dataset_dir)
+            # Generate data dynamically based on custom rates
+            if ticker == 'HY_SAVINGS':
+                rate = st.session_state.get('hy_savings_rate', 3.40)
+            elif ticker == 'CD':
+                rate = st.session_state.get('cd_rate', 3.50)
+            else:
+                return load_fixed_income_data(ticker.lower(), dataset_dir)
+
+            # Generate data from 2015-11-25 to today
+            start_date = datetime(2015, 11, 25)
+            end_date = datetime.now()
+
+            # Generate dynamic data with custom rate
+            df = generate_daily_compound_data(
+                start_date=start_date,
+                end_date=end_date,
+                apy=rate,  
+                initial_value=10000
+            )
+            return df
         else:
             return load_etf_data(ticker, dataset_dir)
     except Exception as e:
         return None
 
 def calculate_portfolio_returns(investment_amount, investment_date, allocations):
-    # Calculate returns for a portfolio with multiple allocations
     try:
         total_current_value = 0
         total_gain_loss = 0
@@ -319,7 +371,6 @@ def get_ai_response(messages, portfolio_results, investment_date, normalized_all
         String response from the AI or fallback response on error
     """
     try:
-        # Prepare settings data
         settings = {
             "experience_level": "beginner",
             "risk_tolerance": st.session_state.risk_scale,
@@ -327,7 +378,6 @@ def get_ai_response(messages, portfolio_results, investment_date, normalized_all
             "current_allocation": normalized_allocations,
         }
 
-        # Prepare portfolio performance data
         portfolio_performance = None
         if portfolio_results:
             unallocated_pct = 100 - sum(normalized_allocations.values())
@@ -344,7 +394,6 @@ def get_ai_response(messages, portfolio_results, investment_date, normalized_all
                 "unallocated_cash": unallocated_cash
             }
 
-        # Prepare asset breakdown data
         asset_breakdown = []
         if portfolio_results:
             for asset, data in portfolio_results['breakdown'].items():
@@ -361,7 +410,6 @@ def get_ai_response(messages, portfolio_results, investment_date, normalized_all
                     "current_price": data['current_price']
                 })
 
-        # Prepare complete context
         context = {
             "user_settings": settings,
             "portfolio_performance": portfolio_performance,
@@ -389,94 +437,126 @@ def get_ai_response(messages, portfolio_results, investment_date, normalized_all
         # Fallback to keyword-based responses if backend is unreachable
         return get_fallback_response(messages[-1]["content"])
 
-def get_risk_from_allocation(voo_pct, btc_pct):
+def get_risk_from_allocation(allocations):
     """
     Calculate the implied risk level (1-10) from the current allocation.
+    Dynamically calculates based on stock vs crypto ratio.
 
     Logic:
-    - High VOO, Low BTC → Conservative (1-3)
-    - Balanced VOO/BTC → Moderate (4-6)
-    - Low VOO, High BTC → Aggressive (7-10)
+    - High Stock, Low Crypto → Conservative (1-3)
+    - Balanced Stock/Crypto → Moderate (4-6)
+    - Low Stock, High Crypto → Aggressive (7-10)
 
     Args:
-        voo_pct: VOO allocation percentage (0-100)
-        btc_pct: BTC allocation percentage (0-100)
+        allocations: Dictionary of asset allocations {ticker: percentage}
 
     Returns:
         int: Risk level (1-10)
     """
-    # Calculate the ratio: higher BTC % means higher risk
-    total_invested = voo_pct + btc_pct
+    stock_total = 0
+    crypto_total = 0
+
+    for ticker, pct in allocations.items():
+        for category, assets in ASSETS.items():
+            if ticker in assets:
+                if category == 'stock':
+                    stock_total += pct
+                elif category == 'crypto':
+                    crypto_total += pct
+                break
+
+    total_invested = stock_total + crypto_total
 
     if total_invested == 0:
-        return 5  # Default to moderate if no allocation
+        return 5  # Default 
 
-    btc_ratio = btc_pct / total_invested  # 0 to 1
+    crypto_ratio = crypto_total / total_invested  
 
-    # Map BTC ratio to risk level
-    # 0% BTC → Risk 1
-    # 25% BTC → Risk 4
-    # 50% BTC → Risk 5
-    # 75% BTC → Risk 8
-    # 100% BTC → Risk 10
+    # Map crypto ratio to risk level
+    # 0-10% Crypto → Risk 1-2 (Very Conservative)
+    # 10-30% Crypto → Risk 3-4 (Conservative)
+    # 30-50% Crypto → Risk 5-6 (Moderate)
+    # 50-70% Crypto → Risk 7-8 (Aggressive)
+    # 70-100% Crypto → Risk 9-10 (Very Aggressive)
 
-    if btc_ratio <= 0.1:
+    if crypto_ratio <= 0.1:
         return 1
-    elif btc_ratio <= 0.2:
+    elif crypto_ratio <= 0.2:
         return 2
-    elif btc_ratio <= 0.3:
+    elif crypto_ratio <= 0.3:
         return 3
-    elif btc_ratio <= 0.4:
+    elif crypto_ratio <= 0.4:
         return 4
-    elif btc_ratio <= 0.5:
+    elif crypto_ratio <= 0.5:
         return 5
-    elif btc_ratio <= 0.6:
+    elif crypto_ratio <= 0.6:
         return 6
-    elif btc_ratio <= 0.7:
+    elif crypto_ratio <= 0.7:
         return 7
-    elif btc_ratio <= 0.8:
+    elif crypto_ratio <= 0.8:
         return 8
-    elif btc_ratio <= 0.9:
+    elif crypto_ratio <= 0.9:
         return 9
     else:
         return 10
 
-def get_risk_based_allocation(risk_level):
+def get_risk_based_allocation(risk_level, enabled_assets=None):
     """
     Calculate suggested asset allocations based on risk tolerance (1-10 scale).
+    Dynamically distributes allocation across enabled assets.
 
     Risk Level Logic:
-    - 1-3 (Conservative): High Fixed Income, Moderate VOO, Low BTC
+    - 1-3 (Conservative): High Fixed Income, Moderate Stocks, Low Crypto
     - 4-6 (Moderate): Balanced with some Fixed Income
-    - 7-10 (Aggressive): Low Fixed Income, Low VOO, High BTC
+    - 7-10 (Aggressive): Low Fixed Income, Low Stocks, High Crypto
+
+    Args:
+        risk_level: Risk tolerance (1-10)
+        enabled_assets: List of enabled asset tickers (optional)
 
     Returns:
-        dict: {'VOO': %, 'BTC': %, 'HY_SAVINGS': %, 'CD': %, 'cash': %} based on risk level
+        dict: Asset allocations based on risk level
     """
+    if enabled_assets is None:
+        enabled_assets = st.session_state.get('enabled_assets', ['VOO', 'BTC', 'HY_SAVINGS', 'CD'])
+
     if risk_level <= 2:
-        # Very Conservative: 40% VOO, 5% BTC, 20% HY Savings, 20% CD, 15% Cash
-        return {'VOO': 40, 'BTC': 5, 'HY_SAVINGS': 20, 'CD': 20, 'cash': 15}
+        base = {'stock': 40, 'crypto': 5, 'fixed_income': 40, 'cash': 15}
     elif risk_level == 3:
-        # Conservative: 45% VOO, 10% BTC, 15% HY Savings, 15% CD, 15% Cash
-        return {'VOO': 45, 'BTC': 10, 'HY_SAVINGS': 15, 'CD': 15, 'cash': 15}
+        base = {'stock': 45, 'crypto': 10, 'fixed_income': 30, 'cash': 15}
     elif risk_level == 4:
-        # Moderate-Conservative: 50% VOO, 20% BTC, 10% HY Savings, 10% CD, 10% Cash
-        return {'VOO': 50, 'BTC': 20, 'HY_SAVINGS': 10, 'CD': 10, 'cash': 10}
+        base = {'stock': 50, 'crypto': 20, 'fixed_income': 20, 'cash': 10}
     elif risk_level == 5:
-        # Moderate: 50% VOO, 30% BTC, 5% HY Savings, 5% CD, 10% Cash
-        return {'VOO': 50, 'BTC': 30, 'HY_SAVINGS': 5, 'CD': 5, 'cash': 10}
+        base = {'stock': 50, 'crypto': 30, 'fixed_income': 10, 'cash': 10}
     elif risk_level == 6:
-        # Moderate-Aggressive: 40% VOO, 40% BTC, 5% HY Savings, 5% CD, 10% Cash
-        return {'VOO': 40, 'BTC': 40, 'HY_SAVINGS': 5, 'CD': 5, 'cash': 10}
+        base = {'stock': 40, 'crypto': 40, 'fixed_income': 10, 'cash': 10}
     elif risk_level == 7:
-        # Aggressive: 30% VOO, 55% BTC, 0% HY Savings, 0% CD, 15% Cash
-        return {'VOO': 30, 'BTC': 55, 'HY_SAVINGS': 0, 'CD': 0, 'cash': 15}
+        base = {'stock': 30, 'crypto': 55, 'fixed_income': 0, 'cash': 15}
     elif risk_level == 8:
-        # Very Aggressive: 20% VOO, 65% BTC, 0% HY Savings, 0% CD, 15% Cash
-        return {'VOO': 20, 'BTC': 65, 'HY_SAVINGS': 0, 'CD': 0, 'cash': 15}
+        base = {'stock': 20, 'crypto': 65, 'fixed_income': 0, 'cash': 15}
     else:  # 9-10
-        # Extremely Aggressive: 10% VOO, 75% BTC, 0% HY Savings, 0% CD, 15% Cash
-        return {'VOO': 10, 'BTC': 75, 'HY_SAVINGS': 0, 'CD': 0, 'cash': 15}
+        base = {'stock': 10, 'crypto': 75, 'fixed_income': 0, 'cash': 15}
+
+    allocation = {}
+    for category, category_pct in base.items():
+        if category == 'cash':
+            allocation['cash'] = category_pct
+            continue
+
+        enabled_in_category = [
+            ticker for ticker in enabled_assets
+            if any(ticker in assets for cat, assets in ASSETS.items() if cat.replace('_', ' ') == category.replace('_', ' ') or
+                   (category == 'stock' and cat == 'stock') or
+                   (category == 'crypto' and cat == 'crypto') or
+                   (category == 'fixed_income' and cat == 'fixed_income'))
+        ]
+
+        if enabled_in_category:
+            per_asset = category_pct / len(enabled_in_category)
+            for ticker in enabled_in_category:
+                allocation[ticker] = int(round(per_asset))
+
+    return allocation
 
 def get_fallback_response(user_input):
     user_lower = user_input.lower()
@@ -492,21 +572,11 @@ def get_fallback_response(user_input):
         return f"That's a great question! I'd suggest exploring our investment terms or trying different VOO/BTC allocations in the dashboard to see how they perform over time."
 
 
-# main layout: Left selector | Middle dashboard | Right panel
 if st.session_state.right_panel_visible:
-    left_col, middle_col, right_col = st.columns([
-        st.session_state.left_panel_width,
-        st.session_state.middle_panel_width,
-        st.session_state.right_panel_width
-    ])
+    left_col, middle_col, right_col = st.columns([2.2, 3.8, 2.0])
 else:
-    left_col, middle_col, right_col = st.columns([
-        st.session_state.left_panel_width,
-        st.session_state.middle_panel_width + st.session_state.right_panel_width,
-        0.1
-    ])
+    left_col, middle_col, right_col = st.columns([2.2, 5.8, 0.1])
 
-# LEFT PANEL -> Investment Settings & Asset Allocation
 with left_col:
     with st.container(border=True):
         st.subheader("💼 Investment Settings")
@@ -515,7 +585,6 @@ with left_col:
                     st.session_state.right_panel_visible = True
                     st.rerun()
         st.write("**Investment Amount**")
-        # Ensure investment_amount is an integer
         current_amount = st.session_state.investment_amount
         if isinstance(current_amount, str):
             current_amount = investment_map.get(current_amount, 10000)
@@ -530,12 +599,19 @@ with left_col:
         st.session_state.investment_amount = int(investment_amount)
 
         st.write("**When you wish you invested**")
+        min_date = datetime(2015, 11, 25).date()
+        max_date = datetime.now().date()
+        default_date = max(min_date, (datetime.now() - timedelta(days=365)).date())
+
         investment_date = st.date_input(
             "Investment Date",
-            value=datetime.now() - timedelta(days=365),
+            value=default_date,
+            min_value=min_date,
+            max_value=max_date,
             label_visibility="collapsed"
         )
         st.caption(f"📅 Simulates returns from {investment_date} to today")
+        st.caption(f"💡 Data available from 2015-11-25 onwards")
 
         st.write("**Risk Tolerance**")
         risk_scale = st.slider(
@@ -548,57 +624,129 @@ with left_col:
 
         st.session_state.risk_scale = risk_scale
 
-        # Check if risk scale changed and auto-apply new allocation
         if risk_scale != st.session_state.last_risk_scale:
             st.session_state.last_risk_scale = risk_scale
-            # Auto-apply the risk-based allocation
-            risk_alloc = get_risk_based_allocation(risk_scale)
-            st.session_state.selected_assets['VOO'] = risk_alloc.get('VOO', 0)
-            st.session_state.selected_assets['BTC'] = risk_alloc.get('BTC', 0)
-            st.session_state.selected_assets['HY_SAVINGS'] = risk_alloc.get('HY_SAVINGS', 0)
-            st.session_state.selected_assets['CD'] = risk_alloc.get('CD', 0)
-            # Force rerun to update all dependent values
+            risk_alloc = get_risk_based_allocation(risk_scale, st.session_state.enabled_assets)
+
+            for category_assets in ASSETS.values():
+                for ticker in category_assets.keys():
+                    if ticker in st.session_state.enabled_assets:
+                        st.session_state.selected_assets[ticker] = risk_alloc.get(ticker, 0)
+                    else:
+                        st.session_state.selected_assets[ticker] = 0
             st.rerun()
 
         risk_descriptions = {
-            1: "🛡️ Very Conservative - Prioritize stability",
-            2: "🛡️ Conservative - Lower volatility",
-            3: "🛡️ Conservative - Moderate VOO focus",
-            4: "⚖️ Moderate-Conservative - Balanced approach",
-            5: "⚖️ Moderate - Even VOO/BTC split",
-            6: "⚖️ Moderate-Aggressive - Crypto lean",
-            7: "🚀 Aggressive - Higher volatility",
-            8: "🚀 Very Aggressive - Crypto focus",
-            9: "🚀 Extremely Aggressive - Maximum volatility",
-            10: "🚀 Extremely Aggressive - Max volatility"
+            1: "🛡️ Very Conservative - Prioritize stability (90% Stocks, 10% Crypto)",
+            2: "🛡️ Conservative - Lower volatility (80% Stocks, 20% Crypto)",
+            3: "🛡️ Conservative - Moderate stock focus (70% Stocks, 30% Crypto)",
+            4: "⚖️ Moderate-Conservative - Balanced approach (60% Stocks, 40% Crypto)",
+            5: "⚖️ Moderate - Even stock/crypto split (50% Stocks, 50% Crypto)",
+            6: "⚖️ Moderate-Aggressive - Crypto lean (40% Stocks, 60% Crypto)",
+            7: "🚀 Aggressive - Higher volatility (30% Stocks, 70% Crypto)",
+            8: "🚀 Very Aggressive - Crypto focus (20% Stocks, 80% Crypto)",
+            9: "🚀 Extremely Aggressive - Maximum volatility (10% Stocks, 90% Crypto)",
+            10: "🚀 Extremely Aggressive - Max crypto (0% Stocks, 100% Crypto)"
         }
         st.caption(risk_descriptions.get(risk_scale, "Unknown risk level"))
 
         st.divider()
 
-        # Asset Allocation -> Independent sliders
+        # Combined Asset Selection & Fixed Income Rates Section
+        with st.expander("**🎯 Select Assets & Customize Rates**", expanded=False):
+            st.caption("Choose which assets to include in your portfolio and set custom rates for fixed income products")
+
+            # Asset Selection
+            for category_name, category_assets in ASSETS.items():
+                st.write(f"**{category_name.replace('_', ' ').title()}** ({len(category_assets)} assets)")
+                cols = st.columns(2)
+                for idx, (ticker, asset_info) in enumerate(category_assets.items()):
+                    with cols[idx % 2]:
+                        is_enabled = ticker in st.session_state.enabled_assets
+                        checkbox_label = f"{asset_info['icon']} {ticker} - {asset_info['name'][:30]}{'...' if len(asset_info['name']) > 30 else ''}"
+
+                        enabled = st.checkbox(
+                            checkbox_label,
+                            value=is_enabled,
+                            key=f"enable_{ticker}"
+                        )
+
+                        if enabled and ticker not in st.session_state.enabled_assets:
+                            st.session_state.enabled_assets.append(ticker)
+                        elif not enabled and ticker in st.session_state.enabled_assets:
+                            st.session_state.enabled_assets.remove(ticker)
+                            if ticker in st.session_state.selected_assets:
+                                st.session_state.selected_assets[ticker] = 0
+
+                if category_name != list(ASSETS.keys())[-1]:
+                    st.write("")
+
+            # Fixed Income Rate Inputs (only show if fixed income assets are enabled)
+            if 'HY_SAVINGS' in st.session_state.enabled_assets or 'CD' in st.session_state.enabled_assets:
+                st.divider()
+                st.write("**💰 Fixed Income Rates**")
+                st.caption("Customize APY rates for your fixed income products")
+
+                rate_cols = st.columns(2)
+
+                if 'HY_SAVINGS' in st.session_state.enabled_assets:
+                    with rate_cols[0]:
+                        hy_rate = st.number_input(
+                            "🏦 HY Savings APY (%)",
+                            min_value=0.0,
+                            max_value=10.0,
+                            value=st.session_state.hy_savings_rate,
+                            step=0.01,
+                            format="%.2f",
+                            key="hy_savings_rate_input",
+                            help="Enter the annual percentage yield for your high-yield savings account"
+                        )
+                        st.session_state.hy_savings_rate = hy_rate
+
+                if 'CD' in st.session_state.enabled_assets:
+                    with rate_cols[1]:
+                        cd_rate = st.number_input(
+                            "💰 CD APY (%)",
+                            min_value=0.0,
+                            max_value=10.0,
+                            value=st.session_state.cd_rate,
+                            step=0.01,
+                            format="%.2f",
+                            key="cd_rate_input",
+                            help="Enter the annual percentage yield for your certificate of deposit"
+                        )
+                        st.session_state.cd_rate = cd_rate
+
+        st.divider()
+
         st.write("**📊 Asset Allocation**")
         st.caption("Set allocations independently - remaining % will be held as cash")
 
-        # Placeholder for Current Allocation display (will be updated after sliders)
         allocation_display_placeholder = st.empty()
 
-        suggested_alloc = get_risk_based_allocation(risk_scale)
+        suggested_alloc = get_risk_based_allocation(risk_scale, st.session_state.enabled_assets)
 
         allocations = {}
 
-        st.write("**Adjust Allocations (Optional)**")
-        st.caption("Override risk-based suggestions by adjusting sliders below")
+        st.write("**Adjust Allocations**")
+        st.caption("Adjust allocations for your selected assets")
 
         for category_name, category_assets in ASSETS.items():
-            with st.expander(f"{category_name.title()}", expanded=True):
-                for ticker, asset_info in category_assets.items():
+            enabled_in_category = {k: v for k, v in category_assets.items() if k in st.session_state.enabled_assets}
+
+            if not enabled_in_category:
+                continue
+
+            with st.expander(f"{category_name.title()} ({len(enabled_in_category)} selected)", expanded=True):
+                for ticker, asset_info in enabled_in_category.items():
                     current_alloc = st.session_state.selected_assets.get(ticker, 0)
                     if isinstance(current_alloc, str):
+                        current_alloc = int(float(current_alloc)) if current_alloc else 0
+                    elif isinstance(current_alloc, float):
+                        current_alloc = int(current_alloc)
+                    else:
                         current_alloc = int(current_alloc) if current_alloc else 0
 
-                    # Slider with full range - user can override risk-based allocation
-                    # include risk_scale in key so sliders reset when risk changes
                     alloc_pct = st.slider(
                         f"{ticker}",
                         min_value=0,
@@ -615,7 +763,16 @@ with left_col:
                     col1, col2 = st.columns([2.5, 1])
 
                     with col1:
-                        st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_info['name']}</span></div>", unsafe_allow_html=True)
+                        # Display custom rate for fixed income products
+                        asset_name = asset_info['name']
+                        if ticker == 'HY_SAVINGS':
+                            custom_rate = st.session_state.get('hy_savings_rate', 3.40)
+                            asset_name = f"High-Yield Savings ({custom_rate:.2f}% APY)"
+                        elif ticker == 'CD':
+                            custom_rate = st.session_state.get('cd_rate', 3.50)
+                            asset_name = f"Certificate of Deposit ({custom_rate:.2f}% APY)"
+
+                        st.markdown(f"<div style='padding: 8px 0'><b>{asset_info['icon']} {ticker}</b><br/><span style='font-size: 0.85em; color: #666'>{asset_name}</span></div>", unsafe_allow_html=True)
 
                     with col2:
                         risk_based_pct = suggested_alloc.get(ticker, 0)
@@ -628,50 +785,64 @@ with left_col:
 
         normalized_allocations = {k: v for k, v in allocations.items() if v > 0}
 
-        # update the Current Allocation display with actual slider values
-        current_voo = allocations.get('VOO', 0)
-        current_btc = allocations.get('BTC', 0)
-        current_hy_savings = allocations.get('HY_SAVINGS', 0)
-        current_cd = allocations.get('CD', 0)
         current_cash = 100 - total_allocation
 
         with allocation_display_placeholder.container():
             with st.expander(f"📊 Current Allocation (Auto-adjusted by Risk Level)", expanded=True):
                 st.markdown("**Your allocations automatically adjust based on your risk tolerance:**")
 
-                # Display allocation in a table format to prevent truncation
-                alloc_data = {
-                    "Asset": ["VOO", "BTC", "HY Savings", "CD", "Cash"],
-                    "Allocation": [f"{current_voo}%", f"{current_btc}%", f"{current_hy_savings}%", f"{current_cd}%", f"{current_cash}%"]
+                category_totals = {
+                    'stock': 0,
+                    'crypto': 0,
+                    'fixed_income': 0
                 }
 
-                # Use columns with better spacing
-                for i in range(0, 5, 5):
-                    cols = st.columns(5)
-                    for j, col in enumerate(cols):
-                        if i + j < 5:
-                            with col:
-                                st.markdown(f"**{alloc_data['Asset'][i+j]}**")
-                                st.markdown(f"<div style='font-size: 1.2rem; font-weight: 600;'>{alloc_data['Allocation'][i+j]}</div>", unsafe_allow_html=True)
+                for category_name, category_assets in ASSETS.items():
+                    for ticker, asset_info in category_assets.items():
+                        if ticker in st.session_state.enabled_assets:
+                            alloc_value = allocations.get(ticker, 0)
+                            if alloc_value > 0:
+                                category_totals[category_name] += alloc_value
+
+                display_items = []
+
+                if category_totals['stock'] > 0:
+                    display_items.append(("📊 Stocks", f"{category_totals['stock']}%"))
+
+                if category_totals['crypto'] > 0:
+                    display_items.append(("₿ Crypto", f"{category_totals['crypto']}%"))
+
+                if category_totals['fixed_income'] > 0:
+                    display_items.append(("🏦 Fixed Income", f"{category_totals['fixed_income']}%"))
+
+                if current_cash > 0:
+                    display_items.append(("💵 Cash", f"{current_cash}%"))
+
+                if display_items:
+                    cols = st.columns(len(display_items))
+                    for col, (category_name, alloc_pct) in zip(cols, display_items):
+                        with col:
+                            st.markdown(f"**{category_name}**")
+                            st.markdown(f"<div style='font-size: 1.2rem; font-weight: 600;'>{alloc_pct}</div>", unsafe_allow_html=True)
 
                 st.caption("💡 Adjust sliders below to update allocations")
 
-        # Detect manual slider changes and update risk level accordingly
-        current_risk = get_risk_from_allocation(allocations.get('VOO', 0), allocations.get('BTC', 0))
+        current_risk = get_risk_from_allocation(allocations)
 
-        # Check if allocations differ from risk-based suggestion
-        risk_based_voo = suggested_alloc['VOO']
-        risk_based_btc = suggested_alloc['BTC']
-        user_overrode = (allocations.get('VOO', 0) != risk_based_voo) or (allocations.get('BTC', 0) != risk_based_btc)
+        user_overrode = False
+        for ticker in st.session_state.enabled_assets:
+            suggested_pct = suggested_alloc.get(ticker, 0)
+            actual_pct = allocations.get(ticker, 0)
+            if suggested_pct != actual_pct:
+                user_overrode = True
+                break
 
-        # If user manually changed allocations, update the risk slider
         if user_overrode and current_risk != risk_scale:
             st.session_state.risk_scale = current_risk
             st.session_state.last_risk_scale = current_risk
 
         st.divider()
 
-        # Show allocation status with validation
         if total_allocation > 100:
             st.error(f"❌ Total: {total_allocation}% (exceeds 100%! Please adjust.)")
         elif total_allocation == 100:
@@ -680,7 +851,6 @@ with left_col:
             unallocated = 100 - total_allocation
             st.info(f"💡 {unallocated}% in Cash (unallocated)")
 
-        # Ensure normalized_allocations is set for calculations
         if total_allocation == 0:
             st.warning("⚠️ Please select at least one asset")
             normalized_allocations = {}
