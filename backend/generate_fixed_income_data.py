@@ -12,14 +12,24 @@ def generate_daily_compound_data(start_date, end_date, apy, initial_value=10000)
     Generate daily compounded interest data for fixed-income products.
 
     Args:
-        start_date: Start date for data generation
-        end_date: End date for data generation
-        apy: Annual Percentage Yield (as decimal, e.g., 0.034 for 3.4%)
+        start_date: Start date for data generation (datetime object or string)
+        end_date: End date for data generation (datetime object or string)
+        apy: Annual Percentage Yield (as decimal, e.g., 0.034 for 3.4%, or percentage like 3.4)
         initial_value: Starting principal amount
 
     Returns:
         DataFrame with Date and Close columns representing account value over time
     """
+    # Convert string dates to datetime if needed
+    if isinstance(start_date, str):
+        start_date = pd.to_datetime(start_date)
+    if isinstance(end_date, str):
+        end_date = pd.to_datetime(end_date)
+
+    # Handle APY as percentage (e.g., 3.4) or decimal (e.g., 0.034)
+    if apy > 1:
+        apy = apy / 100
+
     dates = []
     values = []
 
