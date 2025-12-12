@@ -1092,7 +1092,7 @@ with right_col:
 
             st.divider()
 
-            chat_container = st.container(height=300)
+            chat_container = st.container(height=700)
             with chat_container:
                 for message in st.session_state.chat_messages:
                     with st.chat_message(message["role"]):
