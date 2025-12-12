@@ -38,6 +38,7 @@ server {
 
         # Optional: avoid timeouts on long WS connections
         proxy_read_timeout 86400;
+    }
 }
 ```
 
